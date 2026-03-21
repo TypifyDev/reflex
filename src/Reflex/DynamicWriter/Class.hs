@@ -1,4 +1,28 @@
--- | This module defines the 'DynamicWriter' class.
+-- |
+-- Module:
+--   Reflex.DynamicWriter.Class
+-- Description:
+--   The 'DynamicWriter' typeclass — collect 'Dynamic' outputs from child
+--   widgets and combine them monoidally.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- 'DynamicWriter' is the FRP analogue of @Writer@ for 'Dynamic' values. Child
+-- widgets call 'tellDyn' to contribute 'Dynamic' values, and the parent
+-- receives a single 'Dynamic' that is the monoidal combination of all
+-- contributions.
+--
+-- @
+-- (result, dAllCss) <- runDynamicWriterT $ do
+--   -- Each child contributes CSS classes
+--   tellDyn (constDyn \"container\")
+--   childWidget  -- may also tellDyn
+-- -- dAllCss :: Dynamic t Text (combined via Monoid)
+-- @
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}

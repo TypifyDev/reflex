@@ -1,0 +1,11 @@
+# Henforcer configuration for reflex
+# Enforces documentation standards at compile time (GHC >= 9.4.1 only)
+# See https://github.com/flipstone/henforcer
+
+[forAnyModule]
+maximumExportsPlusHeaderUndocumented = 0
+maximumExportsWithoutSince = 0
+moduleHeaderDescriptionMustExistNonEmpty = true
+moduleHeaderCopyrightMustExistNonEmpty = true
+moduleHeaderLicenseMustExistNonEmpty = true
+moduleHeaderMaintainerMustExistNonEmpty = true

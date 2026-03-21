@@ -1,6 +1,27 @@
--- | This module defines 'PerformEvent', which mediates the
--- interaction between a "Reflex"-based program and the external side-effecting
--- actions such as 'IO'.
+-- |
+-- Module:
+--   Reflex.PerformEvent.Class
+-- Description:
+--   The 'PerformEvent' typeclass — bridge between the pure FRP network and
+--   side-effecting IO actions.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- 'PerformEvent' allows you to run IO (or other effectful) actions in response
+-- to 'Event' firings. The actions are scheduled to run /after/ the current
+-- frame's event propagation completes.
+--
+-- @
+-- -- Log each button click
+-- performEvent_ $ liftIO (putStrLn \"Button clicked!\") \<$ eClick
+--
+-- -- Make an HTTP request and get the response as an Event
+-- eResponse <- performEvent $ liftIO . httpGet \<$\> eRequestUrl
+-- @
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}

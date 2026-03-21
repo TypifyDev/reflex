@@ -1,5 +1,26 @@
--- | This module defines 'TriggerEvent', which describes actions that may create
--- new 'Event's that can be triggered from 'IO'.
+-- |
+-- Module:
+--   Reflex.TriggerEvent.Class
+-- Description:
+--   The 'TriggerEvent' typeclass — create 'Event's that can be fired from IO,
+--   bridging external event sources into the FRP network.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- Use 'newTriggerEvent' to create an 'Event' paired with a callback function.
+-- Call the callback from any IO context (another thread, a timer, a network
+-- handler) to fire the event into the Reflex network.
+--
+-- @
+-- -- Create a trigger for incoming WebSocket messages
+-- (eWsMessage, fireWsMessage) <- newTriggerEvent
+-- -- In some IO callback:
+-- performEvent_ $ liftIO (onWsMessage conn fireWsMessage) \<$ getPostBuild
+-- @
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}

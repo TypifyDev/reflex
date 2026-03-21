@@ -14,9 +14,30 @@
 -- Module:
 --   Reflex.Adjustable.Class
 -- Description:
---   A class for actions that can be "adjusted" over time based on some 'Event'
---   such that, when observed after the firing of any such 'Event', the result
---   is as though the action was originally run with the 'Event's value.
+--   The 'Adjustable' typeclass — monadic actions that can be replaced or
+--   incrementally patched over time in response to 'Event's.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- 'Adjustable' is the foundation for dynamic widget switching in Reflex. It
+-- provides 'runWithReplace', which swaps an entire sub-computation when an
+-- 'Event' fires, and 'traverseDMapWithKeyWithAdjust', which incrementally
+-- patches a collection of sub-computations.
+--
+-- Most application code uses higher-level wrappers from "Reflex.Network"
+-- ('networkView', 'networkHold') or "Reflex.Collection" ('listWithKey',
+-- 'simpleList') rather than calling 'Adjustable' methods directly.
+--
+-- @
+-- -- Replace a widget entirely when a tab changes
+-- (initialResult, eNewResult) <- runWithReplace
+--   (renderTab HomeTab)          -- initial widget
+--   (renderTab \<$\> eTabChange)   -- new widget on each tab change
+-- @
 module Reflex.Adjustable.Class
   (
   -- * The Adjustable typeclass
@@ -49,6 +70,14 @@ import Data.Patch.DMapWithMove
 -- other side-effects) cannot be undone, so it is up to the instance implementer
 -- to determine what the best meaning for this class is in such cases.
 class (Reflex t, Monad m) => Adjustable t m | m -> t where
+  -- | Run the first action, then replace it entirely each time the 'Event'
+  -- fires with a new action. Returns the result of the initial action and
+  -- an 'Event' of results from each replacement.
+  --
+  -- @
+  -- -- Show a loading spinner, then replace with content when data arrives
+  -- (_, eContent) <- runWithReplace loadingSpinner (renderContent \<$\> eDataLoaded)
+  -- @
   runWithReplace
     :: m a
     -> Event t (m b)

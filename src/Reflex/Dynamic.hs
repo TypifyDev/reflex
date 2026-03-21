@@ -21,8 +21,59 @@
 -- Module:
 --   Reflex.Dynamic
 -- Description:
---   This module contains various functions for working with 'Dynamic' values.
---   'Dynamic' and its primitives have been moved to the 'Reflex' class.
+--   Utilities for working with 'Dynamic' values — time-varying values with
+--   change notifications.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- A 'Dynamic' combines a 'Behavior' (current value) with an 'Event' (change
+-- notifications). This module provides the most commonly-used functions for
+-- building and transforming 'Dynamic' values.
+--
+-- == State accumulation
+--
+-- The workhorse function is 'foldDyn', which accumulates state from events:
+--
+-- @
+-- -- Count button clicks
+-- dCount <- foldDyn (+) 0 (1 \<$ eClick)
+--
+-- -- Build a list of messages
+-- dMessages <- foldDyn (:) [] eNewMessage
+--
+-- -- Toggle a boolean on each click
+-- dEnabled <- toggle True eToggleClick
+-- @
+--
+-- == Combining dynamics
+--
+-- Use the 'Applicative' instance or 'zipDynWith':
+--
+-- @
+-- -- Applicative style
+-- let dFullName = (\\f l -> f <> \" \" <> l) \<$\> dFirst \<*\> dLast
+--
+-- -- zipDynWith is more efficient than liftA2
+-- let dSum = zipDynWith (+) dA dB
+-- @
+--
+-- == Extracting parts
+--
+-- @
+-- let bValue = current dCounter    -- Behavior t Int
+--     eValue = updated dCounter    -- Event t Int
+-- @
+--
+-- == Switching
+--
+-- @
+-- -- Follow whichever inner event the Dynamic currently points to
+-- let eOutput = switchDyn dEvent
+-- @
 module Reflex.Dynamic
   ( -- * Basics
     Dynamic -- Abstract so we can preserve the law that the current value is always equal to the most recent update
@@ -110,7 +161,12 @@ forDynM :: forall t m a b. (Reflex t, MonadHold t m) => Dynamic t a -> (forall m
 forDynM d f = mapDynM f d
 
 -- | Create a new 'Dynamic' that only signals changes if the values actually
--- changed.
+-- changed. Useful for preventing unnecessary downstream recomputation.
+--
+-- @
+-- -- Only re-render when the computed CSS class actually changes
+-- dUniqClass <- holdUniqDyn dComputedClass
+-- @
 holdUniqDyn :: (Reflex t, MonadHold t m, MonadFix m, Eq a) => Dynamic t a -> m (Dynamic t a)
 holdUniqDyn = holdUniqDynBy (==)
 
@@ -142,6 +198,21 @@ scanDynMaybe z f d = do
 -- | Create a 'Dynamic' using the initial value and change it each time the
 -- 'Event' occurs using a folding function on the previous value and the value
 -- of the 'Event'.
+--
+-- This is the most commonly used state accumulator in Reflex. Note the
+-- argument order matches 'foldr': the event value comes first, then the
+-- accumulator.
+--
+-- @
+-- -- Count clicks
+-- dCount <- foldDyn (\\_ n -> n + 1) (0 :: Int) eClick
+--
+-- -- Prepend items to a list
+-- dItems <- foldDyn (:) [] eNewItem
+--
+-- -- Update a record field
+-- dConfig <- foldDyn (\\newName cfg -> cfg { name = newName }) defaultConfig eNameChange
+-- @
 foldDyn :: (Reflex t, MonadHold t m, MonadFix m) => (a -> b -> b) -> b -> Event t a -> m (Dynamic t b)
 foldDyn = accumDyn . flip
 
@@ -165,11 +236,21 @@ foldDynMaybeM :: (Reflex t, MonadHold t m, MonadFix m) => (a -> b -> PushM t (Ma
 foldDynMaybeM = accumMaybeMDyn . flip
 
 -- | Create a new 'Dynamic' that counts the occurrences of the 'Event'.
+--
+-- @
+-- dClickCount <- count eClick
+-- -- dClickCount starts at 0, increments by 1 on each click
+-- @
 count :: (Reflex t, MonadHold t m, MonadFix m, Num b) => Event t a -> m (Dynamic t b)
 count e = holdDyn 0 =<< zipListWithEvent const (iterate (+1) 1) e
 
 -- | Create a new 'Dynamic' using the initial value that flips its
 -- value every time the 'Event' occurs.
+--
+-- @
+-- -- Toggle sidebar visibility on button click
+-- dSidebarOpen <- toggle False eToggleButton
+-- @
 toggle :: (Reflex t, MonadHold t m, MonadFix m) => Bool -> Event t a -> m (Dynamic t Bool)
 toggle = foldDyn (const not)
 
@@ -181,6 +262,11 @@ toggle = foldDyn (const not)
 -- work when the outer and (new) inner fires means this imposes fewer "timing
 -- requirements" and thus is far more easy to use without introducing fresh
 -- failure cases. 'switchDyn' is also more performant.
+--
+-- @
+-- -- Each tab produces its own event; switch to whichever tab is active
+-- let eOutput = switchDyn dActiveTabEvent
+-- @
 switchDyn :: forall t a. Reflex t => Dynamic t (Event t a) -> Event t a
 switchDyn d = switch (current d)
 

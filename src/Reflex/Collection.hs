@@ -13,6 +13,34 @@
 -- |
 -- Module:
 --   Reflex.Collection
+-- Description:
+--   Combinators for rendering dynamic collections — maps and lists of widgets
+--   that can be incrementally added, removed, or updated.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- These functions build a set of child widgets from a dynamic collection
+-- (typically a @'Map' k v@) and efficiently patch the set as the collection
+-- changes, rather than rebuilding everything from scratch.
+--
+-- == Typical usage
+--
+-- @
+-- -- Render a dynamic list of todo items, keyed by ID
+-- dTodos  :: Dynamic t (Map TodoId Todo)
+-- dWidgets <- listWithKey dTodos $ \\todoId dTodo -> do
+--   -- Each child widget receives the key and a Dynamic of its value
+--   dynText (fmap todoText dTodo)
+--
+-- -- Simple list (no keys, just a Dynamic list)
+-- dItems :: Dynamic t [Text]
+-- simpleList dItems $ \\dItem ->
+--   dynText dItem
+-- @
 module Reflex.Collection
   (
   -- * Widgets on Collections

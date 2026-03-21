@@ -4,9 +4,41 @@
 -- Module:
 --   Reflex.Workflow
 -- Description:
---   Provides a convenient way to describe a series of interrelated widgets that
---   can send data to, invoke, and replace one another. Useful for modeling user interface
---   "workflows."
+--   State-machine–style widget sequencing. Describes a series of widgets that
+--   can send data to, invoke, and replace one another.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- A 'Workflow' is a widget that produces both a result value and an 'Event'
+-- carrying the /next/ workflow step. When that event fires, the current widget
+-- is torn down and replaced by the new one.
+--
+-- This is useful for multi-step forms, wizards, login flows, or any UI where
+-- exactly one "page" is active at a time.
+--
+-- @
+-- loginWorkflow :: (DomBuilder t m, ...) => Workflow t m ()
+-- loginWorkflow = Workflow $ do
+--   eSubmit <- loginForm
+--   pure ((), verifyWorkflow \<$ eSubmit)
+--
+-- verifyWorkflow :: (DomBuilder t m, ...) => Workflow t m ()
+-- verifyWorkflow = Workflow $ do
+--   eVerified <- verificationCodeForm
+--   pure ((), dashboardWorkflow \<$ eVerified)
+--
+-- dashboardWorkflow :: (DomBuilder t m, ...) => Workflow t m ()
+-- dashboardWorkflow = Workflow $ do
+--   eLogout <- dashboard
+--   pure ((), loginWorkflow \<$ eLogout)
+--
+-- -- Run the workflow
+-- main = mainWidget $ void $ workflow loginWorkflow
+-- @
 module Reflex.Workflow (
     Workflow (..)
   , workflow

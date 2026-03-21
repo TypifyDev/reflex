@@ -165,6 +165,11 @@ library
 
   ghc-options: -Wall -fwarn-redundant-constraints -fwarn-tabs -funbox-strict-fields -O2 -fspecialise-aggressively
 
+  if impl(ghc >= 9.4.1)
+    build-depends: henforcer >= 1.0 && < 2
+    ghc-options:   -fplugin Henforcer
+                   -fplugin-opt=Henforcer:-c henforcer.toml
+
   if flag(debug-trace-events)
     cpp-options: -DDEBUG_TRACE_EVENTS
     build-depends:

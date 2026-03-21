@@ -25,9 +25,50 @@
 -- Module:
 --   Reflex.Class
 -- Description:
---   This module contains the Reflex interface, as well as a variety of
---   convenience functions for working with 'Event's, 'Behavior's, and other
---   signals.
+--   The core Reflex FRP interface: 'Event', 'Behavior', 'Dynamic', and all
+--   combinators for composing reactive programs.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- This module defines the 'Reflex' typeclass and all the primitive and
+-- convenience functions for working with FRP signals. The three core types are:
+--
+-- * 'Event' @t a@ — a discrete stream of occurrences
+-- * 'Behavior' @t a@ — a continuous time-varying value
+-- * 'Dynamic' @t a@ — a value that changes over time with change notifications
+--   (i.e., an 'Event' bundled with a 'Behavior')
+--
+-- The @t@ parameter is the /timeline/ — it selects which FRP engine runs your
+-- program. Almost always you will use 'Reflex.Spider.Spider'.
+--
+-- == Typical usage
+--
+-- @
+-- {-\# LANGUAGE OverloadedStrings, RecursiveDo \#-}
+-- import Reflex
+-- import Reflex.Dom  -- for the DOM layer
+--
+-- counter :: (DomBuilder t m, MonadHold t m, MonadFix m, PostBuild t m) => m ()
+-- counter = do
+--   eAdd <- button \"+1\"
+--   dCount <- foldDyn (+) (0 :: Int) (1 \<$ eAdd)
+--   display dCount
+-- @
+--
+-- == Key concepts
+--
+-- [@hold / holdDyn@]   Turn an 'Event' into a 'Behavior' or 'Dynamic' by
+--                       remembering the most recent occurrence value.
+-- [@foldDyn@]          Accumulate state over time (like a pure fold over events).
+-- [@leftmost@]         Combine multiple 'Event's; on simultaneous fire the leftmost wins.
+-- [@tag / attach@]     Sample a 'Behavior' when an 'Event' fires.
+-- [@gate@]             Conditionally block an 'Event' based on a 'Bool' 'Behavior'.
+-- [@fan / select@]     Efficiently demultiplex one 'Event' into many by key.
+-- [@switch / switchHold@]  Flatten nested event sources that change over time.
 module Reflex.Class
   ( module Data.Patch
     -- * Primitives
@@ -240,16 +281,56 @@ class ( MonadHold t (PushM t)
       , Monad (Dynamic t)
       ) => Reflex t where
   -- | A container for a value that can change over time.  'Behavior's can be
-  -- sampled at will, but it is not possible to be notified when they change
+  -- sampled at will, but it is not possible to be notified when they change.
+  --
+  -- Think of a 'Behavior' as a function from time to a value. You can read its
+  -- current value with 'sample', but you will never receive a notification when
+  -- it changes — for that you need an 'Event' or 'Dynamic'.
+  --
+  -- Create a 'Behavior' with 'hold':
+  --
+  -- @
+  -- bName <- hold \"Anonymous\" eNameSubmitted
+  -- @
   data Behavior t :: Type -> Type
   -- | A stream of occurrences.  During any given frame, an 'Event' is either
   -- occurring or not occurring; if it is occurring, it will contain a value of
-  -- the given type (its "occurrence type")
+  -- the given type (its "occurrence type").
+  --
+  -- 'Event's are the primary way to represent user input, network messages, and
+  -- other discrete happenings. You can transform them with 'fmap', filter them
+  -- with 'mapMaybe', and combine them with 'leftmost' or 'merge'.
+  --
+  -- @
+  -- -- Transform event values
+  -- let eUpperName = toUpper \<$\> eNameInput
+  -- -- Filter to non-empty values
+  -- let eNonEmpty = ffilter (not . null) eNameInput
+  -- -- Combine: leftmost wins on simultaneous fire
+  -- let eAny = leftmost [eClick, eEnterKey]
+  -- @
   data Event t :: Type -> Type
   -- | A container for a value that can change over time and allows
   -- notifications on changes.  Basically a combination of a 'Behavior' and an
   -- 'Event', with a rule that the 'Behavior' will change if and only if the
   -- 'Event' fires.
+  --
+  -- A 'Dynamic' is the workhorse of Reflex applications. Use 'current' to
+  -- extract the 'Behavior' and 'updated' to extract the change 'Event':
+  --
+  -- @
+  -- dCount <- foldDyn (+) 0 (1 \<$ eClick)
+  -- let bCount = current dCount   -- Behavior t Int
+  --     eCount = updated dCount   -- Event t Int
+  -- @
+  --
+  -- 'Dynamic' has 'Functor', 'Applicative', and 'Monad' instances, so you can
+  -- combine dynamics with applicative style:
+  --
+  -- @
+  -- let dFullName = (\\first last -> first <> \" \" <> last)
+  --       \<$\> dFirstName \<*\> dLastName
+  -- @
   data Dynamic t :: Type -> Type
   -- | An 'Incremental' is a more general form of  a 'Dynamic'.
   -- Instead of always fully replacing the value, only parts of it can be patched.
@@ -260,13 +341,37 @@ class ( MonadHold t (PushM t)
   type PushM t :: Type -> Type
   -- | A monad for doing complex pull-based calculations efficiently
   type PullM t :: Type -> Type
-  -- | An 'Event' with no occurrences
+  -- | An 'Event' with no occurrences. Useful as a default or placeholder.
+  --
+  -- @
+  -- -- Start with no event, switch to a real one later
+  -- bEvent <- hold never eNewEventSource
+  -- @
   never :: Event t a
-  -- | Create a 'Behavior' that always has the given value
+  -- | Create a 'Behavior' that always has the given value.
+  -- Equivalent to 'pure' from the 'Applicative' instance.
+  --
+  -- @
+  -- let bLabel = constant \"Hello\"
+  -- @
   constant :: a -> Behavior t a --TODO: Refactor to use 'pure' from Applicative instead; however, we need to make sure that encouraging Applicative-style use of 'Behavior's doesn't have a negative performance impact
   -- | Create an 'Event' from another 'Event'; the provided function can sample
-  -- 'Behavior's and hold 'Event's, and use the results to produce a occurring
-  -- (Just) or non-occurring (Nothing) result
+  -- 'Behavior's and hold 'Event's, and use the results to produce an occurring
+  -- (@Just@) or non-occurring (@Nothing@) result.
+  --
+  -- This is the most general way to transform events. For simple cases,
+  -- prefer 'fmap', 'mapMaybe', or 'attachWithMaybe' instead.
+  --
+  -- @
+  -- -- Validate form input: only fire when the name is non-empty and the
+  -- -- email matches the current user's email
+  -- let eValidSubmit = flip push eSubmitClick $ \\_ -> do
+  --       name  <- sample bName
+  --       email <- sample bEmail
+  --       if null name || null email
+  --         then return Nothing
+  --         else return $ Just (name, email)
+  -- @
   push :: (a -> PushM t (Maybe b)) -> Event t a -> Event t b
   -- | Like 'push' but intended for functions that the implementation can consider cheap to compute for performance considerations. WARNING: The function passed to 'pushCheap' may be run multiple times without any caching.
   pushCheap :: (a -> PushM t (Maybe b)) -> Event t a -> Event t b
@@ -287,10 +392,17 @@ class ( MonadHold t (PushM t)
   fanG :: GCompare k => Event t (DMap k v) -> EventSelectorG t k v
 
   -- | Create an 'Event' that will occur whenever the currently-selected input
-  -- 'Event' occurs
+  -- 'Event' occurs.
+  --
+  -- @
+  -- -- Track which tab is active; each tab has its own event
+  -- bActiveTabEvent <- hold eTab1Clicks eTabSwitch
+  -- let eActiveClick = switch bActiveTabEvent
+  -- @
   switch :: Behavior t (Event t a) -> Event t a
-  -- | Create an 'Event' that will occur whenever the input event is occurring -- and its occurrence value, another 'Event', is also occurring.
-  --   You maybe looking for '@switchHold@ @never@' instead.
+  -- | Create an 'Event' that will occur whenever the input event is occurring
+  -- and its occurrence value, another 'Event', is also occurring.
+  -- You are probably looking for @'switchHold' 'never'@ instead.
   coincidence :: Event t (Event t a) -> Event t a
   -- | Extract the 'Behavior' of a 'Dynamic'.
   current :: Dynamic t a -> Behavior t a
@@ -336,7 +448,15 @@ class ( MonadHold t (PushM t)
 
 -- | Efficiently fan-out an event to many destinations. You should save the
 -- result in a @let@-binding, and then repeatedly 'select' on the result to
--- create child events
+-- create child events.
+--
+-- @
+-- -- Fan a DMap-valued event into separate sub-events
+-- let selector = fan eAllDomEvents
+--     eClick     = select selector Click
+--     eMouseMove = select selector Mousemove
+--     eKeyDown   = select selector Keydown
+-- @
 fan :: forall t k. (Reflex t, GCompare k)
     => Event t (DMap k Identity) -> EventSelector t k
     --TODO: Can we help enforce the partial application discipline here?  The combinator is worthless without it
@@ -387,6 +507,13 @@ instance (Reflex t, Default a) => Default (Dynamic t a) where
 
 -- | 'MonadSample' designates monads that can read the current value of a
 -- 'Behavior'.  This includes both 'PullM' and 'PushM'.
+--
+-- @
+-- -- Inside a push callback, sample a behavior
+-- let eGreeting = flip push eClick $ \\_ -> do
+--       name <- sample bUserName
+--       return $ Just $ \"Hello, \" <> name
+-- @
 class (Applicative m, Monad m) => MonadSample t m | m -> t where
   -- | Get the current value in the 'Behavior'
   sample :: Behavior t a -> m a
@@ -394,6 +521,14 @@ class (Applicative m, Monad m) => MonadSample t m | m -> t where
 -- | 'MonadHold' designates monads that can create new 'Behavior's based on
 -- 'Event's; usually this will be 'PushM' or a monad based on it.  'MonadHold'
 -- is required to create any stateful computations with Reflex.
+--
+-- @
+-- -- Create a Behavior that remembers the last clicked button label
+-- bLastClicked <- hold \"(none)\" eButtonLabel
+--
+-- -- Create a Dynamic counter that increments on each click
+-- dCount <- holdDyn 0 (fmap (+1) eClick)
+-- @
 class MonadSample t m => MonadHold t m where
   -- | Create a new 'Behavior' whose value will initially be equal to the given
   -- value and will be updated whenever the given 'Event' occurs.  The update
@@ -401,11 +536,21 @@ class MonadSample t m => MonadHold t m where
   -- sets the 'Behavior' (or one that is simultaneous with it) is used to sample
   -- the 'Behavior', it will see the __old__ value of the 'Behavior', not the new
   -- one.
+  --
+  -- @
+  -- -- Remember the last search query
+  -- bQuery <- hold \"\" eSearchInput
+  -- @
   hold :: a -> Event t a -> m (Behavior t a)
   default hold :: (m ~ f m', MonadTrans f, MonadHold t m') => a -> Event t a -> m (Behavior t a)
   hold v0 = lift . hold v0
   -- | Create a 'Dynamic' value using the given initial value that changes every
   -- time the 'Event' occurs.
+  --
+  -- @
+  -- -- Track the currently selected tab
+  -- dActiveTab <- holdDyn HomeTab eTabChange
+  -- @
   holdDyn :: a -> Event t a -> m (Dynamic t a)
   default holdDyn :: (m ~ f m', MonadTrans f, MonadHold t m') => a -> Event t a -> m (Dynamic t a)
   holdDyn v0 = lift . holdDyn v0
@@ -421,6 +566,11 @@ class MonadSample t m => MonadHold t m where
   -}
   -- | Create a new 'Event' that only occurs only once, on the first occurrence of
   -- the supplied 'Event'.
+  --
+  -- @
+  -- -- Fire only on the very first click, ignore all subsequent
+  -- eFirstClick <- headE eClick
+  -- @
   headE :: Event t a -> m (Event t a)
   -- | An event which only occurs at the current moment in time, such that:
   --
@@ -535,6 +685,18 @@ slowHeadE e = do
 -- | An 'EventSelector' allows you to efficiently 'select' an 'Event' based on a
 -- key.  This is much more efficient than filtering for each key with
 -- 'mapMaybe'.
+--
+-- Create one with 'fan', then use 'select' to pick out sub-events by key.
+-- This is the standard pattern for demultiplexing events in Reflex (e.g.,
+-- 'Reflex.Dom.domEvent' returns an 'EventSelector' keyed by 'EventName').
+--
+-- @
+-- -- fan produces an EventSelector
+-- let selector = fan eDMapOfEvents
+-- -- select picks out one sub-event efficiently
+-- let eMouseDown = select selector MousedownTag
+-- let eKeyPress  = select selector KeypressTag
+-- @
 newtype EventSelector t k = EventSelector
   { -- | Retrieve the 'Event' for the given key.  The type of the 'Event' is
     -- determined by the type of the key, so this can be used to fan-out
@@ -769,6 +931,13 @@ instance Reflex t => Plus (Event t) where
 
 -- | Replace each occurrence value of the 'Event' with the value of the
 -- 'Behavior' at the time of that occurrence.
+--
+-- @
+-- -- Snapshot the current time whenever a button is clicked
+-- let eTimestamp = tag bCurrentTime eClick
+--
+-- -- Equivalent to: fmap (const x) e  when x is a behavior
+-- @
 tag :: Reflex t => Behavior t b -> Event t a -> Event t b
 tag b = pushAlways $ \_ -> sample b
 
@@ -780,6 +949,12 @@ tagMaybe b = push $ \_ -> sample b
 
 -- | Create a new 'Event' that combines occurrences of supplied 'Event' with the
 -- current value of the 'Behavior'.
+--
+-- @
+-- -- Pair each keypress with the current cursor position
+-- let eKeyWithPos = attach bCursorPos eKeyPress
+-- -- eKeyWithPos :: Event t (Position, Char)
+-- @
 attach :: Reflex t => Behavior t a -> Event t b -> Event t (a, b)
 attach = attachWith (,)
 
@@ -790,7 +965,17 @@ attachWith f = attachWithMaybe $ \a b -> Just $ f a b
 
 -- | Create a new 'Event' by combining each occurrence with the current value of
 -- the 'Behavior'. The occurrence is discarded if the combining function returns
--- Nothing
+-- @Nothing@.
+--
+-- @
+-- -- Only allow purchases when the user has enough balance
+-- let ePurchase = attachWithMaybe
+--       (\\balance item -> if balance >= itemPrice item
+--                          then Just item
+--                          else Nothing)
+--       bBalance
+--       eAddToCart
+-- @
 attachWithMaybe :: Reflex t => (a -> b -> Maybe c) -> Behavior t a -> Event t b -> Event t c
 attachWithMaybe f b e = flip push e $ \o -> (`f` o) <$> sample b
 
@@ -934,6 +1119,17 @@ mergeWith' f g es = fmap (Prelude.foldl1 g . fmap f)
 -- | Create a new 'Event' that occurs if at least one of the 'Event's in the
 -- list occurs. If multiple occur at the same time the value is the value of the
 -- leftmost event.
+--
+-- This is the most common way to combine events in Reflex. Put higher-priority
+-- events earlier in the list.
+--
+-- @
+-- -- Multiple ways to submit: click or press Enter
+-- let eSubmit = leftmost [eSubmitButtonClick, eEnterKey]
+--
+-- -- Priority: explicit save beats auto-save
+-- let eSave = leftmost [eManualSave, eAutoSave]
+-- @
 {-# INLINE leftmost #-}
 leftmost :: Reflex t => [Event t a] -> Event t a
 leftmost = mergeWith const
@@ -956,6 +1152,18 @@ unsafeMapIncremental f g a = unsafeBuildIncremental (fmap f $ sample $ currentIn
 -- | Create a new 'Event' combining the map of 'Event's into an 'Event' that
 -- occurs if at least one of them occurs and has a map of values of all 'Event's
 -- occurring at that time.
+--
+-- @
+-- -- Merge click events from multiple buttons
+-- let buttonEvents = Map.fromList
+--       [ (\"save\", eSaveClick)
+--       , (\"cancel\", eCancelClick)
+--       , (\"delete\", eDeleteClick)
+--       ]
+-- let eAnyButton = mergeMap buttonEvents
+-- -- eAnyButton :: Event t (Map String ())
+-- -- On a click, the map contains which button(s) were pressed
+-- @
 mergeMap :: (Reflex t, Ord k) => Map k (Event t a) -> Event t (Map k a)
 mergeMap = fmap dmapToMap . merge . mapWithFunctorToDMap
 
@@ -976,6 +1184,11 @@ mergeMapIncrementalWithMove :: (Reflex t, Ord k) => Incremental t (PatchMapWithM
 mergeMapIncrementalWithMove = fmap dmapToMap . mergeIncrementalWithMove . unsafeMapIncremental mapWithFunctorToDMap (const2PatchDMapWithMoveWith id)
 
 -- | Split the event into separate events for 'Left' and 'Right' values.
+--
+-- @
+-- -- Split a validation result into success and error events
+-- let (eError, eSuccess) = fanEither eValidationResult
+-- @
 fanEither :: Reflex t => Event t (Either a b) -> (Event t a, Event t b)
 fanEither e =
   let justLeft = either Just (const Nothing)
@@ -1009,6 +1222,11 @@ fanMap = fan . fmap mapToDMap
 -- this rather than 'switchHoldPromptly' and 'switchHoldPromptOnly' unless you
 -- are absolutely sure you need to act on the new event in the coincidental
 -- case.
+--
+-- @
+-- -- Each time a new WebSocket connects, switch to its message stream
+-- eMsg <- switchHold never eNewWsMessages
+-- @
 switchHold :: (Reflex t, MonadHold t m) => Event t a -> Event t (Event t a) -> m (Event t a)
 switchHold ea0 eea = switch <$> hold ea0 eea
 
@@ -1115,6 +1333,14 @@ instance Reflex t => Unzip (Event t) where
 
 -- | Create a new 'Event' that only occurs if the supplied 'Event' occurs and
 -- the 'Behavior' is true at the time of occurrence.
+--
+-- @
+-- -- Only allow keyboard input when the text field is focused
+-- let eFilteredKey = gate bIsFocused eKeyPress
+--
+-- -- Disable a button while a network request is in progress
+-- let eSubmit = gate (not \<$\> bIsLoading) eButtonClick
+-- @
 gate :: Reflex t => Behavior t Bool -> Event t a -> Event t a
 gate = attachWithMaybe $ \allow a -> if allow then Just a else Nothing
 
@@ -1129,12 +1355,22 @@ instance (Reflex t, IsString a) => IsString (Dynamic t a) where
 
 -- | Combine two 'Dynamic's.  The result will change whenever either (or both)
 -- input 'Dynamic' changes.  Equivalent to @zipDynWith (,)@.
+--
+-- @
+-- let dPair = zipDyn dFirstName dLastName
+-- -- dPair :: Dynamic t (Text, Text)
+-- @
 zipDyn :: Reflex t => Dynamic t a -> Dynamic t b -> Dynamic t (a, b)
 zipDyn = zipDynWith (,)
 
 -- | Combine two 'Dynamic's with a combining function.  The result will change
 -- whenever either (or both) input 'Dynamic' changes.
 -- More efficient than 'liftA2'.
+--
+-- @
+-- let dFullName = zipDynWith (\\first last -> first <> \" \" <> last)
+--       dFirstName dLastName
+-- @
 zipDynWith :: Reflex t => (a -> b -> c) -> Dynamic t a -> Dynamic t b -> Dynamic t c
 zipDynWith f da db =
   let eab = align (updated da) (updated db)
@@ -1202,6 +1438,11 @@ distributeListOverDynWith f =
 
 -- | Create a new 'Event' that occurs when the first supplied 'Event' occurs
 -- unless the second supplied 'Event' occurs simultaneously.
+--
+-- @
+-- -- Fire on tick, unless a reset happens at the same time
+-- let eTick' = difference eTick eReset
+-- @
 difference :: Reflex t => Event t a -> Event t b -> Event t a
 difference = alignEventWithMaybe $ \case
   This a -> Just a
@@ -1262,7 +1503,17 @@ factorEvent k0 kv' = do
 --------------------------------------------------------------------------------
 
 -- | An 'Accumulator' type can be built by accumulating occurrences of an
--- 'Event'.
+-- 'Event'. Instances exist for 'Dynamic', 'Behavior', and 'Event'.
+--
+-- The most commonly used entry point is 'accumDyn' (or equivalently
+-- @'accum' :: ... -> m ('Dynamic' t a)@), which folds over event occurrences
+-- much like a left fold over a list.
+--
+-- @
+-- -- Count clicks
+-- dCount <- accum (+) (0 :: Int) (1 \<$ eClick)
+-- -- dCount :: Dynamic t Int
+-- @
 #if __GLASGOW_HASKELL__ < 802
 {-# WARNING accum "ghc < 8.2.1 doesn't seem to be able to specialize functions in this class, which can lead to poor performance" #-}
 {-# WARNING accumM "ghc < 8.2.1 doesn't seem to be able to specialize functions in this class, which can lead to poor performance" #-}
@@ -1286,7 +1537,13 @@ class Reflex t => Accumulator t f | f -> t where
   mapAccumMaybeM :: (MonadHold t m, MonadFix m) => (a -> b -> PushM t (Maybe a, Maybe c)) -> a -> Event t b -> m (f a, Event t c)
 
 -- | Accumulate a 'Dynamic' by folding occurrences of an 'Event'
--- with the provided function. See 'foldDyn'.
+-- with the provided function. See 'foldDyn' in "Reflex.Dynamic" which
+-- is the flipped version and is more commonly used.
+--
+-- @
+-- -- Build up a list of messages
+-- dMessages <- accumDyn (\\msgs newMsg -> msgs ++ [newMsg]) [] eNewMessage
+-- @
 accumDyn
   :: (Reflex t, MonadHold t m, MonadFix m)
   => (a -> b -> a)

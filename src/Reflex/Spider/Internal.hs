@@ -25,8 +25,40 @@
 {-# OPTIONS_GHC -fplugin=Reflex.Optimizer #-}
 #endif
 {-# OPTIONS_GHC -Wunused-binds #-}
--- | This module is the implementation of the 'Spider' 'Reflex' engine.  It uses
--- a graph traversal algorithm to propagate 'Event's and 'Behavior's.
+-- |
+-- Module:
+--   Reflex.Spider.Internal
+-- Description:
+--   Internal implementation of the Spider FRP engine. Uses a graph-traversal
+--   algorithm with height-based topological ordering to propagate events
+--   efficiently through the dependency network.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- __This module is internal.__ It exposes the full implementation of the Spider
+-- engine including mutable state, propagation internals, and the low-level
+-- event graph representation. Application code should use "Reflex.Spider"
+-- instead, which re-exports only the stable public API.
+--
+-- = Architecture
+--
+-- The Spider engine represents the FRP network as a directed acyclic graph
+-- (DAG) of subscriber nodes. When a root event fires:
+--
+-- 1. The fire adds occurrences to a propagation queue keyed by /height/
+--    (topological depth from the root).
+-- 2. Nodes are processed in height order (lowest first), ensuring that
+--    when a node is visited, all of its dependencies have already been
+--    updated.
+-- 3. 'Behavior' invalidation propagates separately via 'Pull' nodes,
+--    which lazily recompute on the next 'sample'.
+--
+-- This ordering guarantees glitch-freedom: every node sees a consistent
+-- snapshot of the network at its propagation time.
 module Reflex.Spider.Internal (module Reflex.Spider.Internal) where
 
 #if MIN_VERSION_base(4,10,0)

@@ -1,5 +1,25 @@
--- | This module defines 'PostBuild', which indicates that an action will be
--- notified when it, and any action it's a part of, has finished executing.
+-- |
+-- Module:
+--   Reflex.PostBuild.Class
+-- Description:
+--   The 'PostBuild' typeclass — provides a one-shot 'Event' that fires when
+--   the widget and all its ancestors have finished building.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- The post-build event fires exactly once, after the current widget (and all
+-- enclosing widgets) have been fully constructed. It is commonly used to trigger
+-- initial data fetches or one-time setup actions.
+--
+-- @
+-- postBuild <- getPostBuild
+-- -- Fetch initial data when the page loads
+-- performEvent_ $ liftIO loadInitialData \<$ postBuild
+-- @
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}

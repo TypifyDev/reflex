@@ -15,7 +15,33 @@
 -- Module:
 --   Reflex.Time
 -- Description:
---   Clocks, timers, and other time-related functions.
+--   Time-based FRP combinators: timers, delays, debouncing, and throttling.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- This module provides combinators for working with time in Reflex networks.
+-- All time-based operations use 'IO' threads under the hood and integrate
+-- with the FRP network via 'TriggerEvent' and 'PerformEvent'.
+--
+-- == Common patterns
+--
+-- @
+-- -- Fire an event every second
+-- eTick <- tickLossy 1 t0
+--
+-- -- Delay an event by 500ms
+-- eDelayed <- delay 0.5 eInput
+--
+-- -- Debounce rapid input (wait 300ms after last keystroke)
+-- eDebounced <- debounce 0.3 eKeyPress
+--
+-- -- Throttle to at most one event per second
+-- eThrottled <- throttle 1.0 eRapidFire
+-- @
 module Reflex.Time where
 
 import Reflex.Class

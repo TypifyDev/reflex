@@ -1,4 +1,27 @@
--- | This module defines the 'EventWriter' class.
+-- |
+-- Module:
+--   Reflex.EventWriter.Class
+-- Description:
+--   The 'EventWriter' typeclass — collect 'Event' outputs from child widgets
+--   and combine them monoidally.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- 'EventWriter' is the FRP analogue of @Writer@ for events. Child widgets call
+-- 'tellEvent' to contribute 'Event's, and the parent receives a single
+-- combined 'Event' (via 'Semigroup') containing all children's contributions.
+--
+-- @
+-- (result, eAllClicks) <- runEventWriterT $ do
+--   -- Each button contributes its label to the collected event
+--   tellEvent (\"Save\" \<$ eSaveClick)
+--   tellEvent (\"Cancel\" \<$ eCancelClick)
+-- -- eAllClicks :: Event t Text (combined via Semigroup)
+-- @
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}

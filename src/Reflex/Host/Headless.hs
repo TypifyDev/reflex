@@ -4,6 +4,36 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ConstraintKinds #-}
 
+-- |
+-- Module:
+--   Reflex.Host.Headless
+-- Description:
+--   Run a Reflex FRP network without a GUI — useful for testing, servers,
+--   CLI tools, or any non-interactive use of Reflex.
+-- Copyright:
+--   (c) 2015-2020 Ryan Trinkle
+-- License:
+--   BSD3
+-- Maintainer:
+--   ryan.trinkle@gmail.com
+--
+-- 'runHeadlessApp' sets up a complete Reflex environment (Spider timeline,
+-- event processing loop, 'PostBuild', 'PerformEvent', 'TriggerEvent') and
+-- runs until the guest application signals shutdown by firing the returned
+-- 'Event'.
+--
+-- @
+-- import Reflex.Host.Headless
+--
+-- main :: IO ()
+-- main = runHeadlessApp $ do
+--   -- Set up your FRP network here
+--   pb <- getPostBuild
+--   performEvent_ $ liftIO (putStrLn \"Started!\") \<$ pb
+--   -- Return an Event that signals when to shut down
+--   -- 'never' means run forever
+--   pure never
+-- @
 module Reflex.Host.Headless where
 
 import Control.Concurrent.Chan (newChan, readChan)
