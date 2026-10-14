@@ -59,6 +59,7 @@ import Data.Functor.Misc
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IntMap
 import Data.Map (Map)
+import Data.Kind (Type)
 
 import Reflex.Class
 import Data.Patch.DMapWithMove
@@ -90,8 +91,8 @@ class (Reflex t, Monad m) => Adjustable t m | m -> t where
     -> m (IntMap v', Event t (PatchIntMap v'))
 
   traverseDMapWithKeyWithAdjust
-    :: GCompare k
-    => (forall a. k a -> v a -> m (v' a))
+    :: forall (k :: Type -> Type) v v'. GCompare k
+    => (forall (a :: Type). k a -> v a -> m (v' a))
     -> DMap k v
     -> Event t (PatchDMap k v)
     -> m (DMap k v', Event t (PatchDMap k v'))
@@ -110,8 +111,8 @@ class (Reflex t, Monad m) => Adjustable t m | m -> t where
       From_Move _ -> error "traverseDMapWithKeyWithAdjust: implementation of traverseDMapWithKeyWithAdjustWithMove inserted spurious move"
 
   traverseDMapWithKeyWithAdjustWithMove
-    :: GCompare k
-    => (forall a. k a -> v a -> m (v' a))
+    :: forall (k :: Type -> Type) v v'. GCompare k
+    => (forall (a :: Type). k a -> v a -> m (v' a))
     -> DMap k v
     -> Event t (PatchDMapWithMove k v)
     -> m (DMap k v', Event t (PatchDMapWithMove k v'))

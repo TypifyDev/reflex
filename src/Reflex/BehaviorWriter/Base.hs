@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-|
 Module: Reflex.BehaviorWriter.Base
 Description: Implementation of BehaviorWriter
@@ -21,6 +22,8 @@ module Reflex.BehaviorWriter.Base
   , withBehaviorWriterT
   ) where
 
+import Control.Monad (forM, join, (<=<))
+import Control.Monad.Fix (MonadFix)
 import Control.Monad.Exception
 import Control.Monad.Identity
 import Control.Monad.IO.Class

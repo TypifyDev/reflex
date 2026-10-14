@@ -4,6 +4,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -20,8 +21,15 @@ module Reflex.EventWriter.Base
   , sequenceDMapWithAdjustEventWriterTWith
   , mapEventWriterT
   , withEventWriterT
+    -- * Internals (exposed so downstream can build non-MTL EventWriter
+    -- scaffolds — e.g. Effectful.State-backed instances that share
+    -- upstream's accumulator shape).
+  , EventWriterState (..)
+  , TellId
+  , tellId
   ) where
 
+import Control.Monad.Fix (MonadFix)
 import Reflex.Adjustable.Class
 import Reflex.Class
 import Reflex.EventWriter.Class (EventWriter, tellEvent)
@@ -48,6 +56,7 @@ import Data.Functor.Misc
 import Data.GADT.Compare (GCompare (..), GEq (..), GOrdering (..))
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IntMap
+import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -59,7 +68,12 @@ import Data.Type.Equality
 import Unsafe.Coerce
 
 {-# DEPRECATED TellId "Do not construct this directly; use tellId instead" #-}
-newtype TellId w x
+-- The kind annotations on w and x are required for GHC >= 9.14 kind
+-- inference: without them, w and x default to distinct polymorphic kind
+-- variables, so tellIdRefl :: TellId w x -> w :~: x cannot unify their
+-- kinds. Pinning both to Type matches the sole real-world usage
+-- (EventWriterT t w with w :: Type).
+newtype TellId (w :: Type) (x :: Type)
   = TellId Int -- ^ WARNING: Do not construct this directly; use 'tellId' instead
   deriving (Show, Eq, Ord, Enum)
 

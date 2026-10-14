@@ -1,3 +1,4 @@
+{-# LANGUAGE InstanceSigs #-}
 -- | This module provides 'RequesterT', the standard implementation of
 -- 'Requester'.
 {-# LANGUAGE AllowAmbiguousTypes #-}
@@ -8,11 +9,14 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -26,19 +30,43 @@ module Reflex.Requester.Base
   , runWithReplaceRequesterTWith
   , traverseIntMapWithKeyWithAdjustRequesterTWith
   , traverseDMapWithKeyWithAdjustRequesterTWith
-  , RequesterData
-  , RequesterDataKey
+  , RequesterData (..)
+  , RequesterDataKey (..)
   , traverseRequesterData
   , forRequesterData
   , requesterDataToList
   , singletonRequesterData
+  , emptyRequesterData
+  , mergeRequesterData
   , matchResponsesWithRequests
   , matchResponseMapWithRequests
   , multiEntry
   , unMultiEntry
   , requesting'
+    -- * Internals (exposed for building non-MTL Requester scaffolds)
+  , RequesterState (..)
+  , MyTag (..)
+  , MyTagWrap (..)
+  , Entry (..)
+  , Single
+  , Multi
+  , Multi2
+  , Multi3
+  , MyTagType (..)
+  , MyTagTypeOffset (..)
+  , TagMap (..)
+  , singleEntry
+  , castMyTagWrap
+    -- Multi2Contents machinery for the DMap traverse variants — needed
+    -- when building an honest Entry (Multi2 k) request payload (the
+    -- record has a Dict field carrying the GCompare k instance).
+  , Multi2Contents (..)
+  , EntryContents
   ) where
 
+import Control.Monad (void)
+import Control.Monad (forM, join, (<=<))
+import Control.Monad.Fix (MonadFix)
 import Reflex.Class
 import Reflex.Adjustable.Class
 import Reflex.Dynamic
@@ -199,9 +227,13 @@ myKeyType (MyTag k) = case k .&. 0x3 of
   0x3 -> unsafeCoerce MyTagType_Multi3
   t -> error $ "Reflex.Requester.Base.myKeyType: no such key type" <> show t
 
-data Single a
+-- Kind annotation on Single's arg required for GHC >= 9.14:
+-- without an explicit (a :: Type), Single's arg defaults to a
+-- polymorphic kind, which prevents EntryContents (Single a) = request a
+-- from unifying its kind with 'request :: Type -> Type'.
+data Single (a :: Type)
 data Multi
-data Multi2 (k :: Type -> Type)
+data Multi2 (k :: k1 -> Type)
 data Multi3
 
 class MyTagTypeOffset x where
@@ -393,7 +425,31 @@ instance (Reflex t, Adjustable t m, MonadHold t m, MonadFix m) => Adjustable t (
   runWithReplace = runWithReplaceRequesterTWith $ \dm0 dm' -> lift $ runWithReplace dm0 dm'
   traverseIntMapWithKeyWithAdjust = traverseIntMapWithKeyWithAdjustRequesterTWith (\f dm0 dm' -> lift $ traverseIntMapWithKeyWithAdjust f dm0 dm') patchIntMapNewElementsMap mergeIntIncremental
   {-# INLINABLE traverseDMapWithKeyWithAdjust #-}
+  -- Explicit InstanceSigs removed 2026-10-11: the poly-kinded `forall k1 (k :: k1 -> Type)`
+  -- version below conflicted with GHC 9.14's stricter kind inference + the class's
+  -- new mono-kinded `forall (k :: Type -> Type)` signature (which mirrors upstream
+  -- reflex 0.9.4.1). Upstream has no explicit instance sig here either — just the
+  -- method body. Letting GHC infer from the class.
+  --
+  -- {- PARKED instance sig — poly-kinded, incompatible with GHC 9.14 class pin:
+  -- traverseDMapWithKeyWithAdjust
+  --   :: forall k1 (k :: k1 -> Type) (v :: k1 -> Type) (v' :: k1 -> Type)
+  --    . GCompare k
+  --   => (forall (a :: k1). k a -> v a -> RequesterT t request response m (v' a))
+  --   -> DMap k v
+  --   -> Event t (PatchDMap k v)
+  --   -> RequesterT t request response m (DMap k v', Event t (PatchDMap k v'))
+  -- -}
   traverseDMapWithKeyWithAdjust = traverseDMapWithKeyWithAdjustRequesterTWith (\f dm0 dm' -> lift $ traverseDMapWithKeyWithAdjust f dm0 dm') mapPatchDMap weakenPatchDMapWith patchMapNewElementsMap mergeMapIncremental
+  -- {- PARKED instance sig — poly-kinded, incompatible with GHC 9.14 class pin:
+  -- traverseDMapWithKeyWithAdjustWithMove
+  --   :: forall k1 (k :: k1 -> Type) (v :: k1 -> Type) (v' :: k1 -> Type)
+  --    . GCompare k
+  --   => (forall (a :: k1). k a -> v a -> RequesterT t request response m (v' a))
+  --   -> DMap k v
+  --   -> Event t (PatchDMapWithMove k v)
+  --   -> RequesterT t request response m (DMap k v', Event t (PatchDMapWithMove k v'))
+  -- -}
   traverseDMapWithKeyWithAdjustWithMove = traverseDMapWithKeyWithAdjustRequesterTWith (\f dm0 dm' -> lift $ traverseDMapWithKeyWithAdjustWithMove f dm0 dm') mapPatchDMapWithMove weakenPatchDMapWithMoveWith patchMapWithMoveNewElementsMap mergeMapIncrementalWithMove
 
 requesting' :: (MyTagTypeOffset x, Monad m) => Event t (Entry request x) -> RequesterT t request response m (Event t (Entry response x))
@@ -461,7 +517,7 @@ traverseIntMapWithKeyWithAdjustRequesterTWith base patchNewElements mergePatchIn
   return (result0, result')
 
 {-# INLINE traverseDMapWithKeyWithAdjustRequesterTWith #-}
-traverseDMapWithKeyWithAdjustRequesterTWith :: forall k t request response m v v' p p'.
+traverseDMapWithKeyWithAdjustRequesterTWith :: forall k1 (k :: k1 -> Type) t request response m (v :: k1 -> Type) (v' :: k1 -> Type) (p :: (k1 -> Type) -> (k1 -> Type) -> Type) (p' :: Type -> Type -> Type).
                                         ( GCompare k
                                         , Reflex t
                                         , MonadHold t m

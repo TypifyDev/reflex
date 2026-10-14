@@ -3,6 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE KindSignatures #-}
 
 -- |
 -- Module:
@@ -46,6 +47,7 @@ import Data.Dependent.Sum (DSum (..), (==>))
 import Data.Foldable (for_)
 import Data.Functor.Identity (Identity(..))
 import Data.IORef (IORef, readIORef)
+import Data.Kind (Type)
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Traversable (for)
 
@@ -76,7 +78,7 @@ type MonadHeadlessApp t m =
 -- classes to interface the FRP network with the outside world. Useful for
 -- testing. Each headless network runs on its own spider timeline.
 runHeadlessApp
-  :: (forall t m. MonadHeadlessApp t m => m (Event t ()))
+  :: (forall (t :: Type) m. MonadHeadlessApp t m => m (Event t ()))
   -- ^ The action to be run in the headless FRP network. The FRP network is
   -- closed at the first occurrence of the resulting 'Event'.
   -> IO ()

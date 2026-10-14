@@ -56,6 +56,8 @@ module Reflex.Collection
   ) where
 
 #ifdef MIN_VERSION_semialign
+import Control.Monad (void)
+import Control.Monad.Fix (MonadFix)
 import Prelude hiding (zip, zipWith)
 #if MIN_VERSION_semialign(1,1,0)
 import Data.Zip (Zip (..))

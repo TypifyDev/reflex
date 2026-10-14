@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 -- | This module defines 'TriggerEventT', the standard implementation of
 -- 'TriggerEvent'.
 {-# LANGUAGE DeriveFunctor #-}
@@ -16,6 +17,7 @@ module Reflex.TriggerEvent.Base
 import Control.Applicative (liftA2)
 import Control.Concurrent
 import Control.Monad.Exception
+import Control.Monad.Fix (MonadFix)
 import Control.Monad.Primitive
 import Control.Monad.Reader
 import Control.Monad.Ref

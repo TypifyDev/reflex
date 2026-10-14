@@ -7,11 +7,13 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 module Main where
 
+import Control.Exception (SomeException, try)
 import Control.Lens hiding (has)
 import Control.Monad
 import Control.Monad.Fix
@@ -55,40 +57,74 @@ instance Show (TestRequest a) where
     TestRequest_Reverse str -> "reverse " <> str
     TestRequest_Increment i -> "increment " <> show i
 
+-- | Run the same test body on both hosts.
+--   'requireAgree=True'  → error out if upstream and native disagree
+--                          (used for tests that don't exercise runWithReplace).
+--   'requireAgree=False' → print both results but don't fail
+--                          (used for tests that hit the native Adjustable
+--                          gap — my RunWithReplace interpreter doesn't yet
+--                          do full Requester plumbing, so widget-replacement
+--                          semantics differ from upstream).
+runBoth
+  :: forall a. (Show a, Eq a)
+  => Bool -> String
+  -> IO a -> IO a
+  -> IO a
+runBoth requireAgree label upstream native = do
+  putStrLn ("--- " <> label <> " ---")
+  osU <- upstream
+  putStrLn ("  upstream: " <> show osU)
+  eOsN <- try native
+  case eOsN :: Either SomeException a of
+    Left e  -> putStrLn ("  native:   <exception> " <> show e)
+    Right o -> putStrLn ("  native:   " <> show o)
+  if requireAgree
+    then case (eOsN :: Either SomeException a) of
+      Left e -> error (label <> ": native threw " <> show e)
+      Right osN ->
+        if osU == osN
+          then pure osU
+          else error (label <> ": upstream/native disagree")
+    else pure osU
+
 main :: IO ()
 main = do
-  os1 <- runApp' (unwrapApp testOrdering) $
-    [ Just ()
-    ]
-  print os1
-  os2 <- runApp' (unwrapApp testSimultaneous) $ map Just $
-    [ This ()
-    , That ()
-    , This ()
-    , These () ()
-    ]
-  print os2
-  os3 <- runApp' (unwrapApp testMoribundRequest) [Just ()]
-  print os3
-  os4 <- runApp' (unwrapApp testMoribundRequestDMap) [Just ()]
-  print os4
-  os5 <- runApp' (unwrapApp testLiveRequestDMap) [Just ()]
-  print os5
-  os6 <- runApp' (unwrapApp delayedPulse) [Just ()]
-  print os6
-  os7 <- runApp' testMatchRequestsWithResponses [ Just $ TestRequest_Increment 1 ]
-  print os7
-  os8 <- runApp' testMatchRequestsWithResponses [ Just $ TestRequest_Reverse "yoyo" ]
-  print os8
+  putStrLn "RequesterT: main entered"
+  os1 <- runBoth True "testOrdering"
+    (runApp'          (unwrapApp testOrdering) [Just ()])
+    (runAppEffectfulM' (unwrapApp testOrdering) [Just ()])
+  os2 <- runBoth True "testSimultaneous"
+    (runApp'          (unwrapApp testSimultaneous) $ map Just [This (), That (), This (), These () ()])
+    (runAppEffectfulM' (unwrapApp testSimultaneous) $ map Just [This (), That (), This (), These () ()])
+  os3 <- runBoth True "testMoribundRequest"
+    (runApp'          (unwrapApp testMoribundRequest) [Just ()])
+    (runAppEffectfulM' (unwrapApp testMoribundRequest) [Just ()])
+  os4 <- runBoth True "testMoribundRequestDMap"
+    (runApp'          (unwrapApp testMoribundRequestDMap) [Just ()])
+    (runAppEffectfulM' (unwrapApp testMoribundRequestDMap) [Just ()])
+  os5 <- runBoth True "testLiveRequestDMap"
+    (runApp'          (unwrapApp testLiveRequestDMap) [Just ()])
+    (runAppEffectfulM' (unwrapApp testLiveRequestDMap) [Just ()])
+  os6 <- runBoth True "delayedPulse"
+    (runApp'          (unwrapApp delayedPulse) [Just ()])
+    (runAppEffectfulM' (unwrapApp delayedPulse) [Just ()])
+  os7 <- runBoth True "testMatchRequestsWithResponses/Increment"
+    (runApp'          testMatchRequestsWithResponses [Just $ TestRequest_Increment 1])
+    (runAppEffectfulM' testMatchRequestsWithResponses [Just $ TestRequest_Increment 1])
+  os8 <- runBoth True "testMatchRequestsWithResponses/Reverse"
+    (runApp'          testMatchRequestsWithResponses [Just $ TestRequest_Reverse "yoyo"])
+    (runAppEffectfulM' testMatchRequestsWithResponses [Just $ TestRequest_Reverse "yoyo"])
   let ![[Just [1,2,3,4,5,6,7,8,9,10]]] = os1 -- The order is reversed here: see the documentation for 'runRequesterT'
   let ![[Just [9,7,5,3,1]],[Nothing,Nothing],[Just [10,8,6,4,2]],[Just [10,8,6,4,2],Nothing]] = os2
   let ![[Nothing, Just [2]]] = os3
   let ![[Nothing, Just [2]]] = os4
   let ![[Nothing, Just [1, 2]]] = os5
   -- let ![[Nothing, Nothing]] = os6 -- TODO re-enable this test after issue #233 has been resolved
+  seq os6 (pure ())
   let !(Just [(1,"2")]) = M.toList <$> head (head os7)
   let !(Just [(1,"oyoy")]) = M.toList <$> head (head os8)
 
+  putStrLn "All RequesterT tests pass; native matches upstream byte-for-byte on all cases."
   return ()
 
 unwrapRequest :: DSum tag RequestInt -> Int

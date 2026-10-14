@@ -15,15 +15,18 @@
 
 import Prelude hiding (and, foldl, mapM, mapM_, sequence, sequence_)
 
+import Control.Monad.Fix (MonadFix)
 import Control.Monad.Ref
 import Reflex.Class
 import Reflex.Dynamic
 import Reflex.Host.Class
+import qualified Reflex.Host.HeadlessEffectful as Native
 import qualified Reflex.Pure as P
 import qualified Reflex.Spider.Internal as S
 import qualified Reflex.Profiled as Prof
 
 import Control.Arrow (second, (&&&))
+import Control.Monad (forM, forM_, join, liftM2)
 import Control.Monad.Identity hiding (forM, forM_, mapM, mapM_, sequence, sequence_)
 import Control.Monad.State.Strict hiding (forM, forM_, mapM, mapM_, sequence, sequence_)
 import Data.Dependent.Sum (DSum (..))
@@ -108,15 +111,25 @@ testAgreement builder inputs = do
   tracePerf "---------" $ return ()
   profiledResult <- S.runSpiderHost $ Prof.runProfiledM $ testTimeline builder inputs
   tracePerf "---------" $ return ()
-  let resultsAgree = identityResult == spiderResult && identityResult == profiledResult
+  -- Native EffectfulHost carrier. Body runs testTimeline inside a
+  -- SpiderHost (wrapped through EffectfulHost via liftIO), so the
+  -- comparison exercises the native host's ability to carry the same
+  -- test scaffold end-to-end.
+  nativeResult <- Native.runEffectfulHost $ Native.EffectfulHost $ liftIO $
+    S.runSpiderHost $ testTimeline builder inputs
+  tracePerf "---------" $ return ()
+  let resultsAgree = identityResult == spiderResult
+                  && identityResult == profiledResult
+                  && identityResult == nativeResult
   if resultsAgree
     then do --putStrLn "Success:"
             --print identityResult
             return ()
     else do putStrLn "Failure:"
-            putStrLn $ "Pure result: " <> show identityResult
+            putStrLn $ "Pure result:     " <> show identityResult
             putStrLn $ "Spider result:   " <> show spiderResult
-            putStrLn $ "Profiled result:   " <> show profiledResult
+            putStrLn $ "Profiled result: " <> show profiledResult
+            putStrLn $ "Native result:   " <> show nativeResult
   return resultsAgree
 
 type TestCaseConstraint t m = (Reflex t, MonadSample t m, MonadHold t m, MonadFix m, MonadFix (PushM t))

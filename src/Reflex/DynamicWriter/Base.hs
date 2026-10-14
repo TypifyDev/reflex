@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -19,6 +20,8 @@ module Reflex.DynamicWriter.Base
   , withDynamicWriterT
   ) where
 
+import Control.Monad (forM, join, (<=<))
+import Control.Monad.Fix (MonadFix)
 import Control.Monad.Exception
 import Control.Monad.Identity
 import Control.Monad.IO.Class

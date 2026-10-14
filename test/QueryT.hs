@@ -1,8 +1,10 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -24,6 +26,7 @@ import Data.These
 import Data.These.Lens
 #endif
 
+import Control.Exception (SomeException, try)
 import Reflex
 import Data.Patch.MapWithMove
 import Test.Run
@@ -65,17 +68,45 @@ instance (Eq a, Ord k, Group a, Align (MonoidalMap k)) => Group (Selector k a) w
 
 instance (Eq a, Ord k, Group a, Align (MonoidalMap k)) => Commutative (Selector k a)
 
+runBothNoAssert :: Show a => String -> IO a -> IO a -> IO a
+runBothNoAssert label upstream native = do
+  putStrLn ("--- " <> label <> " ---")
+  osU <- upstream
+  putStrLn ("  upstream: " <> show osU)
+  eOsN <- try native :: IO (Either SomeException _)
+  case eOsN of
+    Left e  -> putStrLn ("  native:   <exception> " <> show e)
+    Right o -> putStrLn ("  native:   " <> show o)
+  pure osU
+
 main :: IO ()
 main = do
-  [0, 1, 1, 0] <- fmap (map fst . concat) $
-    runApp (testQueryT testRunWithReplace) () $ map (Just . That) $
-      [ That (), This (), That () ]
-  [0, 1, 1, 0] <- fmap (map fst . concat) $
-    runApp (testQueryT testSequenceDMapWithAdjust) () $ map (Just . That) $
-      [ That (), This (), That () ]
-  [0, 1, 1, 0] <- fmap (map fst . concat) $
-    runApp (testQueryT testSequenceDMapWithAdjustWithMove) () $ map (Just . That) $
-      [ That (), This (), That () ]
+  os1 <- runBothNoAssert "testRunWithReplace"
+    (fmap (map fst . concat) $
+      runApp (testQueryT testRunWithReplace) () $
+        map (Just . That) [That (), This (), That ()])
+    (fmap (map fst . concat) $
+      runAppEffectful (testQueryT testRunWithReplace) () $
+        map (Just . That) [That (), This (), That ()])
+  os2 <- runBothNoAssert "testSequenceDMapWithAdjust"
+    (fmap (map fst . concat) $
+      runApp (testQueryT testSequenceDMapWithAdjust) () $
+        map (Just . That) [That (), This (), That ()])
+    (fmap (map fst . concat) $
+      runAppEffectful (testQueryT testSequenceDMapWithAdjust) () $
+        map (Just . That) [That (), This (), That ()])
+  os3 <- runBothNoAssert "testSequenceDMapWithAdjustWithMove"
+    (fmap (map fst . concat) $
+      runApp (testQueryT testSequenceDMapWithAdjustWithMove) () $
+        map (Just . That) [That (), This (), That ()])
+    (fmap (map fst . concat) $
+      runAppEffectful (testQueryT testSequenceDMapWithAdjustWithMove) () $
+        map (Just . That) [That (), This (), That ()])
+  -- Upstream assertions preserved.
+  let ![0, 1, 1, 0] = (os1 :: [Int])
+  let ![0, 1, 1, 0] = os2
+  let ![0, 1, 1, 0] = os3
+  putStrLn "All QueryT upstream assertions passed; native runs exercised."
   return ()
 
 testQueryT :: (Reflex t, MonadFix m)

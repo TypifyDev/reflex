@@ -29,7 +29,7 @@ import Reflex.EventWriter.Base
 import Test.Run
 import Test.Hspec
 import Reflex.Spider.Internal (EventLoopException)
-import Data.Witherable (Filterable)
+import Witherable (Filterable)
 
 #if defined(MIN_VERSION_these_lens) || (MIN_VERSION_these(0,8,0) && !MIN_VERSION_these(0,9,0))
 import Data.These.Lens
@@ -139,33 +139,53 @@ splitThese f = (mapMaybe (preview here) f,  mapMaybe (preview there) f)
 
 main :: IO ()
 main = hspec $ do
-  describe "DebugCycles" $ do
+  describe "DebugCycles (upstream MTL)" $ do
     it "throws EventLoopException on switchLoop01" $ do
-      check switchLoop01
+      checkUpstream switchLoop01
     it "throws EventLoopException on switchLoop02" $ do
-      check switchLoop02
+      checkUpstream switchLoop02
     it "throws EventLoopException on switchLoop03" $ do
-      check switchLoop03
+      checkUpstream switchLoop03
     it "throws EventLoopException on buildSwitchLoop" $ do
-      check $ buildLoop switchLoop01
+      checkUpstream $ buildLoop switchLoop01
     xit "throws EventLoopException on mergeLoop" $ do
-      check mergeLoop
+      checkUpstreamAdj mergeLoop
     xit "throws EventLoopException on staticLoop01" $ do
-      check staticLoop01
+      checkUpstream staticLoop01
     xit "throws EventLoopException on staticLoop02" $ do
-      check staticLoop02
+      checkUpstream staticLoop02
     xit "throws EventLoopException on buildStaticLoop" $ do
-      check buildStaticLoop
+      checkUpstream buildStaticLoop
     xit "throws EventLoopException on coincidenceLoop" $ do
-      check coincidenceLoop
+      checkUpstream coincidenceLoop
     xit "throws EventLoopException on dynLoop" $ do
-      check dynLoop
+      checkUpstream dynLoop
     xit "throws EventLoopException on buildCoincidenceLoop" $ do
-      check $ buildLoop coincidenceLoop
+      checkUpstream $ buildLoop coincidenceLoop
+  describe "DebugCycles (native Effectful)" $ do
+    it "throws EventLoopException on switchLoop01" $ do
+      checkNative switchLoop01
+    it "throws EventLoopException on switchLoop02" $ do
+      checkNative switchLoop02
+    it "throws EventLoopException on switchLoop03" $ do
+      checkNative switchLoop03
+    it "throws EventLoopException on buildSwitchLoop" $ do
+      checkNative $ buildLoop switchLoop01
  where
    milliseconds = (*1000)
    occs = [  This 1, This 2, That (), This 3, That (), This 1 ]
-   check test = do
+   checkUpstream :: (forall t m. Widget t m => (Event t Int, Event t ()) -> m (Event t Int)) -> Expectation
+   checkUpstream test = do
      let action = timeout (milliseconds 50) $ do
                     runApp' (test . splitThese) (Just <$> occs)
+     action `shouldThrow` (const True :: Selector EventLoopException)
+   checkUpstreamAdj :: (forall t m. (Adjustable t m, Widget t m) => (Event t Int, Event t ()) -> m (Event t Int)) -> Expectation
+   checkUpstreamAdj test = do
+     let action = timeout (milliseconds 50) $ do
+                    runApp' (test . splitThese) (Just <$> occs)
+     action `shouldThrow` (const True :: Selector EventLoopException)
+   checkNative :: (forall t m. Widget t m => (Event t Int, Event t ()) -> m (Event t Int)) -> Expectation
+   checkNative test = do
+     let action = timeout (milliseconds 50) $ do
+                    runAppEffectful' (test . splitThese) (Just <$> occs)
      action `shouldThrow` (const True :: Selector EventLoopException)

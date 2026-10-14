@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 module Main where
 
+import Control.Exception (SomeException, try)
 import Control.Lens
 import Control.Monad
 import Control.Monad.Fix
@@ -22,29 +23,55 @@ import Reflex
 import Reflex.EventWriter.Base
 import Test.Run
 
+-- Run same body on upstream + native, print both. requireAgree=True → error on mismatch.
+runBoth
+  :: forall a. (Show a, Eq a)
+  => Bool -> String -> IO a -> IO a -> IO a
+runBoth requireAgree label upstream native = do
+  putStrLn ("--- " <> label <> " ---")
+  osU <- upstream
+  putStrLn ("  upstream: " <> show osU)
+  eOsN <- try native
+  case (eOsN :: Either SomeException a) of
+    Left e -> putStrLn ("  native:   <exception> " <> show e)
+    Right o -> putStrLn ("  native:   " <> show o)
+  if requireAgree
+    then case (eOsN :: Either SomeException a) of
+      Left e -> error (label <> ": native threw " <> show e)
+      Right osN ->
+        if osU == osN
+          then pure osU
+          else error (label <> ": upstream/native disagree")
+    else pure osU
+
 main :: IO ()
 main = do
-  os1@[[Just [10,9,8,7,6,5,4,3,2,1]]] <- runApp' (unwrapApp testOrdering) $
-    [ Just ()
-    ]
-  print os1
-  os2@[[Just [1,3,5,7,9]],[Nothing,Nothing],[Just [2,4,6,8,10]],[Just [2,4,6,8,10],Nothing]]
-    <- runApp' (unwrapApp testSimultaneous) $ map Just $
-         [ This ()
-         , That ()
-         , This ()
-         , These () ()
-         ]
-  print os2
-  os3@[[Nothing, Just [2]]] <- runApp' (unwrapApp testMoribundTellEvent) [Just ()]
-  print os3
-  os4@[[Nothing, Just [2]]] <- runApp' (unwrapApp testMoribundTellEventDMap) [Just ()]
-  print os4
-  os5@[[Nothing, Just [1, 2]]] <- runApp' (unwrapApp testLiveTellEventDMap) [Just ()]
-  print os5
-  os6 <- runApp' (unwrapApp delayedPulse) [Just ()]
-  print os6
+  os1 <- runBoth True "testOrdering"
+    (runApp'          (unwrapApp testOrdering) [Just ()])
+    (runAppEffectful' (unwrapApp testOrdering) [Just ()])
+  os2 <- runBoth True "testSimultaneous"
+    (runApp'          (unwrapApp testSimultaneous) $ map Just [This (), That (), This (), These () ()])
+    (runAppEffectful' (unwrapApp testSimultaneous) $ map Just [This (), That (), This (), These () ()])
+  os3 <- runBoth True "testMoribundTellEvent"
+    (runApp'          (unwrapApp testMoribundTellEvent) [Just ()])
+    (runAppEffectful' (unwrapApp testMoribundTellEvent) [Just ()])
+  os4 <- runBoth True "testMoribundTellEventDMap"
+    (runApp'          (unwrapApp testMoribundTellEventDMap) [Just ()])
+    (runAppEffectful' (unwrapApp testMoribundTellEventDMap) [Just ()])
+  os5 <- runBoth True "testLiveTellEventDMap"
+    (runApp'          (unwrapApp testLiveTellEventDMap) [Just ()])
+    (runAppEffectful' (unwrapApp testLiveTellEventDMap) [Just ()])
+  os6 <- runBoth True "delayedPulse"
+    (runApp'          (unwrapApp delayedPulse) [Just ()])
+    (runAppEffectful' (unwrapApp delayedPulse) [Just ()])
+  -- Upstream assertions preserved.
+  let ![[Just [10,9,8,7,6,5,4,3,2,1]]] = os1
+  let ![[Just [1,3,5,7,9]],[Nothing,Nothing],[Just [2,4,6,8,10]],[Just [2,4,6,8,10],Nothing]] = os2
+  let ![[Nothing, Just [2]]] = os3
+  let ![[Nothing, Just [2]]] = os4
+  let ![[Nothing, Just [1, 2]]] = os5
   let ![[Nothing, Nothing]] = os6
+  putStrLn "All EventWriterT upstream assertions passed; native runs exercised."
   return ()
 
 unwrapApp :: (Reflex t, Monad m) => (a -> EventWriterT t [Int] m ()) -> a -> m (Event t [Int])

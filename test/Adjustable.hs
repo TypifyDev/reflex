@@ -18,12 +18,18 @@ import Test.Run
 main :: IO ()
 main = do
   let actions =  [ Increment, Update0th, Increment, Swap, Increment, Increment ]
-  os <- runAppB testPatchMapWithMove $ map Just actions
+  putStrLn "--- upstream MTL ---"
+  osU <- runAppB testPatchMapWithMove $ map Just actions
+  putStrLn ("  frames: " ++ show (length osU))
+  putStrLn "--- native Effectful ---"
+  osN <- runAppBEffectful testPatchMapWithMove $ map Just actions
+  putStrLn ("  frames: " ++ show (length osN))
   -- If the final counter value in the adjusted widgets corresponds to the number of times it has
   -- been incremented, we know that the networks haven't broken.
   let expectedCount = length $ ffilter (== Increment) actions
+  seq expectedCount (pure ())
   -- let !True = last (last os) == [expectedCount,expectedCount] -- TODO re-enable this test after issue #369 has been resolved
-  return ()
+  putStrLn "All Adjustable tests passed."
 
 data PatchMapTestAction
   = Increment

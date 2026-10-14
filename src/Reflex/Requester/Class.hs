@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeOperators #-}
 -- | This module defines 'Requester', which indicates that an action can make
 -- requests and receive responses to them.  Typically, this is used for things
 -- like a WebSocket, where it's desirable to collect many potential sources of
@@ -18,6 +19,7 @@ module Reflex.Requester.Class
  , requestingIdentity
  ) where
 
+import Control.Monad.Fix (MonadFix)
 import Control.Monad.Identity
 import Control.Monad.Reader
 import qualified Control.Monad.State.Lazy as Lazy

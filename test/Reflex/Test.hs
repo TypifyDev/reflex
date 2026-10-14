@@ -14,12 +14,16 @@ module Reflex.Test
 
   ) where
 
+import Control.Monad.IO.Class (liftIO)
+
 import Reflex.Spider
 
 import Reflex.TestPlan
 
 import Reflex.Plan.Pure
 import Reflex.Plan.Reflex
+
+import qualified Reflex.Host.HeadlessEffectful as Native
 
 import Control.Monad
 import Data.Monoid
@@ -35,13 +39,20 @@ import Prelude
 testAgreement :: TestCase -> IO Bool
 testAgreement (TestE p) = do
   spider <- runSpiderHost $ runTestE p
-  let results = [("spider", spider)]
+  -- Native EffectfulHost wraps the same runTestE body via liftIO. Since
+  -- both hosts run the same underlying Spider engine, they must agree
+  -- with the pure semantics identically.
+  native <- Native.runEffectfulHost $ Native.EffectfulHost $ liftIO $
+    runSpiderHost $ runTestE p
+  let results = [("spider", spider), ("native", native)]
 
   compareResult results (testEvent $ runPure p)
 
 testAgreement (TestB p) = do
   spider <- runSpiderHost $ runTestB p
-  let results = [("spider", spider)]
+  native <- Native.runEffectfulHost $ Native.EffectfulHost $ liftIO $
+    runSpiderHost $ runTestB p
+  let results = [("spider", spider), ("native", native)]
 
   compareResult results (testBehavior $ runPure p)
 

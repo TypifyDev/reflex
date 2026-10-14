@@ -22,8 +22,12 @@ module Reflex.PerformEvent.Base
   ( PerformEventT (..)
   , FireCommand (..)
   , hostPerformEventT
+    -- * Requester-scaffold helpers (used by 'Reflex.Host.HeadlessEffectful')
+  , defaultAdjustBase
+  , defaultAdjustIntBase
   ) where
 
+import Control.Monad.Fix (MonadFix)
 import Reflex.Class
 import Reflex.Adjustable.Class
 import Reflex.Host.Class
@@ -68,7 +72,7 @@ instance (PrimMonad (HostFrame t), ReflexHost t) => PrimMonad (PerformEventT t m
   type PrimState (PerformEventT t m) = PrimState (HostFrame t)
   primitive = PerformEventT . lift . primitive
 
-instance (ReflexHost t, Ref m ~ Ref IO) => PerformEvent t (PerformEventT t m) where
+instance (ReflexHost t, Monad (HostFrame t), Ref m ~ Ref IO) => PerformEvent t (PerformEventT t m) where
   type Performable (PerformEventT t m) = HostFrame t
   {-# INLINABLE performEvent_ #-}
   performEvent_ = PerformEventT . requesting_

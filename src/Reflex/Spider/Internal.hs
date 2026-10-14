@@ -62,6 +62,7 @@
 module Reflex.Spider.Internal (module Reflex.Spider.Internal) where
 
 #if MIN_VERSION_base(4,10,0)
+import Control.Monad.Fix (MonadFix)
 import Control.Applicative (liftA2)
 #endif
 import Control.Concurrent
@@ -98,7 +99,7 @@ import Data.Proxy
 import Data.These
 import Data.Traversable
 import Data.Type.Equality ((:~:)(Refl))
-import Data.Witherable (Filterable, mapMaybe)
+import Witherable (Filterable, mapMaybe)
 import GHC.Exts hiding (toList)
 import GHC.IORef (IORef (..))
 import GHC.Stack
@@ -1191,7 +1192,7 @@ data Switch x a
             }
 
 #ifdef USE_TEMPLATE_HASKELL
-{-# ANN CoincidenceSubscribed "HLint: ignore Redundant bracket" #-}
+{-# ANN CoincidenceSubscribed ("HLint: ignore Redundant bracket" :: String) #-}
 #endif
 data CoincidenceSubscribed x a
    = CoincidenceSubscribed { coincidenceSubscribedCachedSubscribed :: !(IORef (Maybe (CoincidenceSubscribed x a)))
@@ -1642,7 +1643,7 @@ getRootSubscribed k r sub = do
       return (sln, subscribed, occ)
 
 #ifdef USE_TEMPLATE_HASKELL
-{-# ANN cleanupRootSubscribed "HLint: ignore Redundant bracket" #-}
+{-# ANN cleanupRootSubscribed ("HLint: ignore Redundant bracket" :: String) #-}
 #endif
 cleanupRootSubscribed :: RootSubscribed x a -> IO ()
 cleanupRootSubscribed self@RootSubscribed { rootSubscribedKey = k, rootSubscribedCachedSubscribed = cached } = do
@@ -2548,6 +2549,7 @@ instance HasSpiderTimeline x => Reflex.Class.MonadHold (SpiderTimeline x) (Event
   {-# INLINABLE holdIncremental #-}
   holdIncremental = holdIncrementalSpiderEventM
   {-# INLINABLE buildDynamic #-}
+  buildDynamic :: forall a. Reflex.Class.PushM (SpiderTimeline x) a -> Reflex.Class.Event (SpiderTimeline x) a -> EventM x (Reflex.Class.Dynamic (SpiderTimeline x) a)
   buildDynamic = buildDynamicSpiderEventM
   {-# INLINABLE headE #-}
   headE = R.slowHeadE
@@ -2957,6 +2959,6 @@ instance NotReady (SpiderTimeline x) (SpiderHost x) where
   notReadyUntil _ = return ()
   notReady = return ()
 
-instance HasSpiderTimeline x => NotReady (SpiderTimeline x) (PerformEventT (SpiderTimeline x) (SpiderHost x)) where
+instance {-# OVERLAPPING #-} HasSpiderTimeline x => NotReady (SpiderTimeline x) (PerformEventT (SpiderTimeline x) (SpiderHost x)) where
   notReadyUntil _ = return ()
   notReady = return ()

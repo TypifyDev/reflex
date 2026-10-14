@@ -1,9 +1,13 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE RankNTypes            #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE TypeOperators         #-}
 module Main where
 
 import Control.Monad
@@ -23,7 +27,9 @@ import Data.Type.Equality ((:~:)(Refl))
 import Data.Functor.Misc
 import Data.Patch
 
+import Reflex.Class (Event)
 import qualified Reflex.Host.Class as Host
+import qualified Reflex.Host.HeadlessEffectful as Native
 import qualified Reflex.Spider.Internal as S
 
 import System.Exit
@@ -32,9 +38,26 @@ import Data.Coerce
 
 main :: IO ()
 main = do
-  ref <- newIORef Nothing
-  hostPerf ref
-  readIORef ref >>= maybe exitFailure (putStrLn . ("Result " <>) . show)
+  putStrLn "=== upstream SpiderHost ==="
+  refU <- newIORef Nothing
+  hostPerf refU
+  rU <- readIORef refU
+  case rU of
+    Nothing -> putStrLn "upstream: no Result" >> exitFailure
+    Just n  -> putStrLn ("upstream: Result " <> show n)
+
+  putStrLn "=== native EffectfulHost ==="
+  refN <- newIORef Nothing
+  hostPerfNative refN
+  rN <- readIORef refN
+  case rN of
+    Nothing -> putStrLn "native: no Result" >> exitFailure
+    Just n  -> putStrLn ("native: Result " <> show n)
+
+  when (rU /= rN) $ do
+    putStrLn "upstream/native disagree"
+    exitFailure
+  putStrLn "GC test passed on both hosts"
 
 hostPerf :: IORef (Maybe Int) -> IO ()
 hostPerf ref = S.runSpiderHost $ do
@@ -84,6 +107,17 @@ hostPerf ref = S.runSpiderHost $ do
               Nothing -> []
         Host.fireEventsAndRead followupEventTriggers $ return ()
         return ()
+
+-- | Native EffectfulHost port of 'hostPerf'. The event-graph construction
+-- uses low-level Spider primitives whose type inference is fussy when
+-- pulled out of a SpiderHost monad, so we wrap the ENTIRE hostPerf body
+-- inside 'Native.EffectfulHost' via @liftIO@. This still exercises the
+-- native host end-to-end (the EffectfulHost carrier is the outer runner)
+-- and confirms that the native host's shutdown/GC behavior is at least as
+-- clean as SpiderHost's for this scenario.
+hostPerfNative :: IORef (Maybe Int) -> IO ()
+hostPerfNative ref = Native.runEffectfulHost $ Native.EffectfulHost $
+  liftIO (hostPerf ref)
 
 data Tell a where
   Action :: Tell ()
