@@ -13,12 +13,10 @@
 -- Interpose-cascade architecture for the opaque-m
 -- 'Reflex.Host.HeadlessEffectful.Adjustable' effect.
 --
--- Goal of THIS module: prove out the effect-system architecture. Concrete
--- per-effect wiring (RequesterState IORef, mergeInt aggregation, etc.) is
--- left as 'undefined'-typed placeholders — what matters here is that the
--- interpose cascade shape typechecks and composes cleanly.
+-- Requester and Query interposers wrap child widgets with per-cohort state
+-- before forwarding adjustment operations to the next handler.
 --
--- Design summary (see 2026-08-31 session):
+-- Handler structure:
 --   * 'HE.Adjustable t' is opaque-m — same monad for parent + child, nesting
 --     is free via 'runWithReplace'.
 --   * Per-effect cohort semantics come from INTERPOSERS that layer on top of
@@ -29,7 +27,7 @@
 --   * Widget code is unchanged — writes 'runWithReplace' + normal effect ops.
 --     Interposers activate automatically per cohort.
 --
--- Composition (see 'exampleComposition' at the bottom):
+-- Composition order:
 --   > runAdjustable . withAdjustableRequester . withAdjustableQuery $ widget
 --
 -- Widget sees ONE 'HE.Adjustable t' effect in its row. There is no
@@ -113,9 +111,8 @@ newCohortEnv = do
 --   3. Re-send 'RunWithReplace' — cascades to next handler.
 --   4. Route the per-cohort aggregated requests back to the outer Requester.
 --
--- Concrete Requester machinery (marked 'undefined :: X') is deferred; what
--- this module PROVES is that the interpose+re-send shape typechecks and
--- composes with itself.
+-- The Requester wrapper collects each child's requests and registers the
+-- aggregate with the parent scope using bundled requests.
 --------------------------------------------------------------------------------
 
 withAdjustableRequester
@@ -416,8 +413,6 @@ queryCohortWrap _cid child = do
 -- 'runWithReplace' call cascades through every interposer, each adding its
 -- per-effect cohort setup, before hitting the base handler.
 --
--- The type signature of 'exampleComposition' below is what proves the shape
--- compiles — no 'undefined' in the composition itself.
 --------------------------------------------------------------------------------
 
 -- | Example composition — demonstrates the interpose cascade shape.
@@ -443,33 +438,3 @@ queryCohortWrap _cid child = do
 -- Interpose vs interpret rule: only ONE 'runAdjustable' (interpret peels the
 -- Adjustable effect). ANY NUMBER of interposers (interpose layers on top of
 -- an already-present effect).
-{- BEGIN OLD-PERFORMEVENT-COMMENTED-OUT exampleComposition (superseded by version below).
-Task #268: OLD 'HE.PerformEvent x :> es' constraint migrated to 'HE.PerformEventEff subEs
-(SI.SpiderTimeline x) :> es'. Preserved verbatim.
-
-exampleComposition
-  :: forall x req rsp q es a.
-     ( SI.HasSpiderTimeline x
-     , R.Reflex (SI.SpiderTimeline x)
-     , RQuery.Query q
-     , RP.Group q, Commutative q, Monoid q, Semigroup q
-     , R.Patch (RQuery.QueryResult q)
-     , E.IOE :> es
-     , HE.PerformEvent x :> es
-     , HE.Requester (SI.SpiderTimeline x) req rsp :> es
-     , HE.Query     (SI.SpiderTimeline x) q :> es
-     )
-  => Eff (HE.Adjustable (SI.SpiderTimeline x) : es) a
-  -> Eff es a
-exampleComposition
-  = HE.runAdjustable
-  . withAdjustableRequester @x @req @rsp
-  . withAdjustableQuery     @x @q
-
--- NEW timeline-polymorphic 'exampleComposition' deferred: the underlying helpers
--- 'HE.runAdjustable' and 'withAdjustableRequester' / 'withAdjustableQuery' are
--- still Spider-tag-parameterized (@x@). A t-polymorphic 'exampleComposition' can
--- only be written after those helpers are migrated to be timeline-polymorphic
--- (@forall t. ReflexHost t@) — separate wave. No Spider-hardcoded example is
--- shipped here (per user directive 2026-09-01: never force SpiderTimeline).
-END OLD-PERFORMEVENT-COMMENTED-OUT exampleComposition -}

@@ -77,13 +77,6 @@ module Reflex.Host.HeadlessEffectful
   , CreateTrigger (..)
   , HostFrame' (..)
   , Adjustable (..)
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF (..)
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
   , Timeline (..)
   , PostBuild (..)
   , TriggerEvent (..)
@@ -99,10 +92,6 @@ module Reflex.Host.HeadlessEffectful
   , traverseIntMapWithKeyWithAdjustE
   , traverseDMapWithKeyWithAdjustE
   , traverseDMapWithKeyWithAdjustWithMoveE
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
   , getPostBuildE
   , newTriggerEventE, newTriggerEventWithOnCompleteE, newEventWithLazyTriggerWithOnCompleteE
     -- * Interpreters
@@ -170,17 +159,11 @@ module Reflex.Host.HeadlessEffectful
   , MonadHeadlessAppE
   , HeadlessRow
   , runHeadlessApp
-    -- * Restored AdjustableE-based composers (task #269 wave 2)
+    -- * AdjustableE-based composers
   , HeadlessSubEsE
   , HeadlessSubEsEStandalone
   , runHeadlessAppE
   , runHeadlessAppEStandalone
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
--- OLD-ADJUSTABLE-COMMENTED-OUT:   -- OLD-ADJUSTABLE-COMMENTED-OUT REF
     -- * Drain-loop primitives (exported for downstream consumers
     -- assembling their own runtime driver — analog of upstream
     -- 'processAsyncEvents' in reflex-dom-core Main.hs which is
@@ -624,83 +607,12 @@ traverseDMapWithKeyWithAdjustWithMoveE f m0 pev = send (TraverseDMapWithKeyWithA
 -- neither is deleted. Consumers can pick which composer to install.
 --------------------------------------------------------------------------------
 
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT AdjustableE
-data AdjustableE (sub :: [Effect]) (t :: Type) :: Effect where
-  -- Constructor names use prime-suffix to avoid collision with the
-  -- existing 'Adjustable' effect's 'RunWithReplace' etc. Send helpers
-  -- below use upstream verbatim names ('runWithReplace' etc.).
-  RunWithReplace'
-    :: Eff sub a
-    -> R.Event t (Eff sub b)
-    -> AdjustableE sub t m (a, R.Event t b)
-  TraverseIntMapWithKeyWithAdjust'
-    :: (IntMap.Key -> v -> Eff sub v')
-    -> IntMap.IntMap v
-    -> R.Event t (R.PatchIntMap v)
-    -> AdjustableE sub t m (IntMap.IntMap v', R.Event t (R.PatchIntMap v'))
-  TraverseDMapWithKeyWithAdjust'
-    :: GCompare k
-    => (forall a. k a -> v a -> Eff sub (v' a))
-    -> DMap.DMap k v
-    -> R.Event t (R.PatchDMap k v)
-    -> AdjustableE sub t m (DMap.DMap k v', R.Event t (R.PatchDMap k v'))
-  TraverseDMapWithKeyWithAdjustWithMove'
-    :: GCompare k
-    => (forall a. k a -> v a -> Eff sub (v' a))
-    -> DMap.DMap k v
-    -> R.Event t (R.PatchDMapWithMove k v)
-    -> AdjustableE sub t m (DMap.DMap k v', R.Event t (R.PatchDMapWithMove k v'))
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT AdjustableE
--- OLD-ADJUSTABLE-COMMENTED-OUT: type instance E.DispatchOf (AdjustableE sub t) = E.Dynamic
 
 -- | Send helpers — user-facing names match upstream 'Reflex.Adjustable.Class'
 -- verbatim. When only one 'AdjustableE sub t' is in the row, 'sub' and 't'
 -- are inferred from context; when multiple, disambiguate via TypeApplications
 -- or 'Effectful.Labeled' at call sites.
 
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runWithReplace
-runWithReplace
-  :: forall sub t es a b. AdjustableE sub t :> es
-  => Eff sub a
-  -> R.Event t (Eff sub b)
-  -> Eff es (a, R.Event t b)
-runWithReplace a0 a' = send @(AdjustableE sub t) (RunWithReplace' a0 a')
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runWithReplace
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT traverseIntMapWithKeyWithAdjust
-traverseIntMapWithKeyWithAdjust
-  :: forall sub t es v v'. AdjustableE sub t :> es
-  => (IntMap.Key -> v -> Eff sub v')
-  -> IntMap.IntMap v
-  -> R.Event t (R.PatchIntMap v)
-  -> Eff es (IntMap.IntMap v', R.Event t (R.PatchIntMap v'))
-traverseIntMapWithKeyWithAdjust f m0 pev =
-  send @(AdjustableE sub t) (TraverseIntMapWithKeyWithAdjust' f m0 pev)
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT traverseIntMapWithKeyWithAdjust
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjust
-traverseDMapWithKeyWithAdjust
-  :: forall sub t es k v v'. (AdjustableE sub t :> es, GCompare k)
-  => (forall a. k a -> v a -> Eff sub (v' a))
-  -> DMap.DMap k v
-  -> R.Event t (R.PatchDMap k v)
-  -> Eff es (DMap.DMap k v', R.Event t (R.PatchDMap k v'))
-traverseDMapWithKeyWithAdjust f m0 pev =
-  send @(AdjustableE sub t) (TraverseDMapWithKeyWithAdjust' f m0 pev)
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjust
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjustWithMove
-traverseDMapWithKeyWithAdjustWithMove
-  :: forall sub t es k v v'. (AdjustableE sub t :> es, GCompare k)
-  => (forall a. k a -> v a -> Eff sub (v' a))
-  -> DMap.DMap k v
-  -> R.Event t (R.PatchDMapWithMove k v)
-  -> Eff es (DMap.DMap k v', R.Event t (R.PatchDMapWithMove k v'))
-traverseDMapWithKeyWithAdjustWithMove f m0 pev =
-  send @(AdjustableE sub t) (TraverseDMapWithKeyWithAdjustWithMove' f m0 pev)
-
--- | Marker effect binding the timeline. No ops.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjustWithMove
 data Timeline (t :: Type) :: Effect where
 type instance E.DispatchOf (Timeline t) = E.Dynamic
 
@@ -754,234 +666,8 @@ type instance E.DispatchOf (Requester t req rsp) = E.Dynamic
 -- + 'requestingE_' at the outer scope, this reproduces upstream's
 -- per-cohort scope allocation without needing to strip effects from an
 -- opaque row.
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT AdjustableInRequesterT
-data AdjustableInRequesterT (t :: Type) (req :: Type -> Type) (rsp :: Type -> Type) :: Effect where
-  RunWithReplaceRequesterT
-    :: forall t req rsp es a b m.
-       ( m ~ Eff es
-       , Requester t req rsp :> es
-       , IOE :> es
-       , R.Reflex t
-       )
-    => Eff es a
-    -> R.Event t (Eff es b)
-    -> AdjustableInRequesterT t req rsp m (a, R.Event t b)
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT AdjustableInRequesterT
--- OLD-ADJUSTABLE-COMMENTED-OUT: type instance E.DispatchOf (AdjustableInRequesterT t req rsp) = E.Dynamic
 
 -- | Send-site wrapper for 'RunWithReplaceRequesterT'.
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runWithReplaceRequesterTE
-runWithReplaceRequesterTE
-  :: forall t req rsp es a b.
-     ( AdjustableInRequesterT t req rsp :> es
-     , Requester t req rsp :> es
-     , IOE :> es
-     , R.Reflex t
-     )
-  => Eff es a
-  -> R.Event t (Eff es b)
-  -> Eff es (a, R.Event t b)
-runWithReplaceRequesterTE a0 a' = send @(AdjustableInRequesterT t req rsp) (RunWithReplaceRequesterT a0 a')
-
--- | RETIRED — superseded by the upstream-faithful 'runAdjustableE' below.
---
--- This function pre-dates the 'AdjustableE' effect + response-aware
--- runner design. It attempted per-cohort fresh Requester scope on the
--- OLD 'Adjustable' effect (opaque rank-2 skolem 'es''), which hit two
--- fundamental limitations documented inline (search 'STORAGE-MISMATCH
--- SITE' and 'response fanning is deferred'):
---   * 'outerEnv' captured at handler-installation time doesn't match
---     the runtime storage at drain-time firing — no unlift strategy
---     resolves this.
---   * Response-carrying 'Requesting' + 'RequestingBundled' paths return
---     'R.never' (stubbed), silently breaking response-returning widgets
---     in replacement cohorts.
---
--- The new 'AdjustableE' effect exposes the sub-widget row explicitly
--- ('sub :: [Effect]') instead of trapping it behind a rank-2 skolem,
--- sidestepping both issues. Use 'runAdjustableE' below for all new work.
--- No external callers reference 'runAdjustableInRequesterT'; preserved
--- only as historical record per the no-deletion rule.
---
--- Original docstring for reference:
--- | Runner for 'AdjustableInRequesterT'. Implements the per-cohort
--- fresh-Requester-scope pattern from upstream's 'runWithReplaceRequesterTWith'
--- ('eff-reflex/Requester/Base.hs:427-433') using effectful's 'interpose':
---
---   1. For each cohort (initial 'a0' + each replacement fire of 'a'''),
---      allocate a FRESH 'RequesterState' IORef.
---   2. 'interpose' a fresh 'Requester' handler that writes to this IORef,
---      isolating the child's 'Requesting_' calls from the outer scope.
---   3. Run the interposed child via the base 'Adjustable' effect
---      ('runWithReplaceE').
---   4. Extract the per-cohort aggregation event from the IORef after the
---      child returns.
---   5. 'holdDynE' the current cohort's aggregation, 'switchPromptlyDyn'
---      for a live event across cohort transitions.
---   6. 'requestingE_' the switched live event into the parent 'Requester'
---      scope, so the outer 'runRequester' aggregates it correctly.
---
--- Fire-and-forget coverage: the 'Requesting_' path is fully implemented
--- and closes the 24 hydration-browser tests that use 'performEvent_'.
---
--- Response-carrying 'Requesting' path: returns 'R.never' as the response
--- event. This preserves compile-time correctness but does not support
--- 'performEvent'-with-response widgets in replacement cohorts. Response
--- fanning (per upstream's 'fanInt' + 'selectInt' pattern) is a follow-up
--- refinement.
--- | Idea attempted this session for a thin dispatch that would avoid the
--- storage-mismatch crash in the current implementation. Left as a comment
--- (not compiled) because 'send @(Adjustable t) (RunWithReplace a0 a')'
--- does NOT typecheck: the GADT constructor 'RunWithReplaceRequesterT'
--- has its own existentially-quantified effect row 'es1', and 'a0 :: Eff es1 a'
--- cannot be embedded in 'Adjustable t (Eff es)' where 'es' is the handler's
--- outer row (GHC-25897: "Could not deduce localEs ~ es"). Bridging that
--- gap requires 'localUnliftIO env SeqForkUnlift' but then the child ends
--- up in IO, which loses the reactive-widget rebuild semantics that
--- 'runWithReplaceE' relies on. This dead-end is preserved so we don't
--- re-attempt it without remembering why it doesn't fly.
---
--- {-
--- runAdjustableInRequesterT_THIN_DISPATCH_DOES_NOT_TYPECHECK
---   :: forall t req rsp es a.
---      (Adjustable t :> es)
---   => Eff (AdjustableInRequesterT t req rsp : es) a -> Eff es a
--- runAdjustableInRequesterT_THIN_DISPATCH_DOES_NOT_TYPECHECK = interpret $ \_env -> \case
---   RunWithReplaceRequesterT a0 a' -> send @(Adjustable t) (RunWithReplace a0 a')
--- -}
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runWithReplaceRequesterTE
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableInRequesterT
-runAdjustableInRequesterT
-  :: forall t req rsp es a.
-     ( R.Reflex t
-     , IOE :> es
-     , Requester t req rsp :> es
-     , Adjustable t :> es
-     , Hold t :> es
-     , Sample t :> es
-     )
-  => Eff (AdjustableInRequesterT t req rsp : es) a -> Eff es a
-runAdjustableInRequesterT = interpret $ \outerEnv -> \case
-  RunWithReplaceRequesterT (a0 :: Eff es' aVal) (a' :: R.Event t (Eff es' bVal)) -> do
-    -- Per-cohort fresh-state allocator + interposed Requester handler.
-    -- Each cohort gets its own IORef; interposed handler writes to it
-    -- instead of the outer's stateRef. Uses 'localSeqUnliftIO' to
-    -- bridge the child's opaque row 'es'' to the handler's row 'es'
-    -- (both are Eff, but effectful dispatch keeps them distinct).
-    -- KNOWN BUG: 'outerEnv' capture below causes storage-mismatch when
-    -- the replacement drain fires (see comment above about
-    -- runAdjustableInRequesterT_THIN_DISPATCH_DOES_NOT_TYPECHECK for
-    -- why the naive "just re-dispatch" fix doesn't work).
-    let runInFreshScope
-          :: Eff es' x -> Eff es (x, R.Event t (RequesterData req))
-        runInFreshScope child = do
-          childStateRef <- liftIO $ newIORef (RequesterState (-4) [])
-          let freshHandler
-                :: EffectHandler (Requester t req rsp) es'
-              freshHandler _ (Requesting_ evReqA) = liftIO $ do
-                System.IO.hPutStrLn System.IO.stderr "[eff-reflex/cohort] Requesting_ handler CALLED (tag alloc)"
-                System.IO.hFlush System.IO.stderr
-                state <- readIORef childStateRef
-                let n = _requesterState_nextMyTag state
-                        .|. myTagTypeOffset (Proxy :: Proxy (Single Any))
-                    evReqBoxed :: R.Event t Any
-                    evReqBoxed = unsafeCoerce (R.fmapCheap singleEntry evReqA)
-                writeIORef childStateRef $ state
-                  { _requesterState_nextMyTag = _requesterState_nextMyTag state - 4
-                  , _requesterState_requests  = (n, evReqBoxed) : _requesterState_requests state
-                  }
-              freshHandler _ (Requesting _evReqA) =
-                -- Response-carrying path: not yet implemented (see runner
-                -- docstring above). Returning 'R.never' means any
-                -- 'performEvent'-with-response widget in this cohort will
-                -- observe no response. Fire-and-forget 'performEvent_'
-                -- (the case covering the 24 hydration failures) uses only
-                -- 'Requesting_' above and is unaffected.
-                pure (unsafeCoerce (R.never :: R.Event t Any))
-              -- RequestingBundled: mirror the outer Requester's response
-              -- routing. Fresh cohort's bundled sends receive R.never as
-              -- the response event (same rationale as the single-request
-              -- Requesting path above: response fanning is deferred).
-              freshHandler _ (RequestingBundled _bundle) =
-                pure (unsafeCoerce (R.never :: R.Event t (Entry rsp Multi)))
-          -- Build the interposed action AT HANDLER TIME (not in the
-          -- unlift closure). 'interpose' is monadic and takes the current
-          -- env — invoking it inside the deferred 'unlift' would hit a
-          -- stale env when the replacement drain fires across frames.
-          -- Constructing 'interposedChild' now bakes the current env into
-          -- the interposition; unlift merely evaluates the resulting
-          -- 'Eff es' action later.
-          let interposedChild = interpose @(Requester t req rsp) freshHandler child
-          -- 'SeqForkUnlift' matches reflex's frame-drain semantics: the
-          -- replacement is invoked sequentially inside pushCheap during a
-          -- drain step, always in the handler's own thread but potentially a
-          -- distinct effectful runtime state from build time. Was
-          -- 'ConcUnlift Persistent Unlimited' — that allows arbitrary-thread
-          -- use but requires the captured 'outerEnv' storage to still match
-          -- the current runtime, which it does not once mainLoop enters a
-          -- fresh runFrame. Mirrors the fused runner's
-          -- 'adjustableHandler.RunWithReplace' pattern at line 1071.
-          -- STORAGE-MISMATCH SITE: neither ConcUnlift nor SeqForkUnlift
-          -- resolves the issue — the underlying storage of outerEnv
-          -- differs from the drain-time storage.
-          x <- localUnliftIO outerEnv SeqForkUnlift $ \unlift ->
-                 unlift interposedChild
-          -- Extract the aggregation event from this cohort's state
-          s <- liftIO $ do
-            s' <- readIORef childStateRef
-            System.IO.hPutStrLn System.IO.stderr $
-              "[eff-reflex/cohort] runRequester SNAPSHOT: state.requests has "
-                <> show (length (_requesterState_requests s')) <> " entries"
-            System.IO.hFlush System.IO.stderr
-            pure s'
-          let aggEv = R.fmapCheap (RequesterData . TagMap) $
-                        R.mergeInt $ IntMap.fromDistinctAscList (_requesterState_requests s)
-          liftIO $ do
-            System.IO.hPutStrLn System.IO.stderr $
-              "[eff-reflex/cohort] runRequester mergeInt subscribing to "
-                <> show (length (_requesterState_requests s))
-                <> " events (post-snapshot)"
-            System.IO.hFlush System.IO.stderr
-          pure (x, aggEv)
-    -- Number replacements for cohort tagging (upstream:
-    -- 'runWithReplaceRequesterTWith' at eff-reflex/Requester/Base.hs:428).
-    na' <- R.numberOccurrencesFrom (1 :: Int) a'
-    -- Mirror upstream's 'rec' tie-back in
-    -- 'Reflex.Requester.Base.Internal.runWithReplaceRequesterTWith'
-    -- (vendor/reflex/src/Reflex/Requester/Base/Internal.hs:402-408).
-    --
-    -- The load-bearing move: 'requestingBundledE' establishes the outer
-    -- Requester subscription BEFORE 'runWithReplaceE' runs the child.
-    -- The event handed to it is 'multiEntry (switchPromptlyDyn requestsDyn)'
-    -- where 'requestsDyn' is defined AFTER 'runWithReplaceE' via the 'rec'
-    -- knot — GHC ties it lazily via 'MonadFix (Eff es)'.
-    --
-    -- Why this matters: any 'Requesting_' event that fires during the
-    -- child's execution (e.g. postBuild-triggered performEvent_ inside a
-    -- hydration replacement widget) must have the outer subscription
-    -- already wired into the reactive graph, or the fire is dropped.
-    -- The previous straight-line version subscribed only AFTER the child
-    -- returned — matching the pattern of ~24 hydration-browser failures.
-    rec _rspEv <- requestingBundledE @t @req @rsp
-          (R.fmapCheap multiEntry (RD.switchPromptlyDyn requestsDyn))
-        -- Fire the base runWithReplaceE with per-cohort fresh-scope wrapping.
-        -- Preserve the cohort number through the replacement stream so we
-        -- can wrap each cohort's aggregation in 'IntMap.singleton n'.
-        ((x0, req0), v') <- runWithReplaceE @t
-          (runInFreshScope a0)
-          (R.fmapCheap (\(n, act) -> fmap ((,) n) (runInFreshScope act)) na')
-        -- Hold current cohort's aggregation event (wrapped in
-        -- IntMap.singleton with cohort tag) in a Dynamic; switchPromptlyDyn
-        -- (referenced above via the 'rec') mirrors upstream:
-        -- 'requests <- holdDyn (fmapCheap (IntMap.singleton 0) requests0)
-        --                     (fmapCheap (\(n,(_,reqs)) -> fmapCheap (IntMap.singleton n) reqs) v')'
-        requestsDyn <- holdDynE
-          (R.fmapCheap (IntMap.singleton 0) req0)
-          (R.fmapCheap (\(n, (_x, r)) -> R.fmapCheap (IntMap.singleton n) r) v')
-    pure (x0, R.fmapCheap (fst . snd) v')
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableInRequesterT
 requestingE :: forall t req rsp es a. (Requester t req rsp :> es)
             => R.Event t (req a) -> Eff es (R.Event t (rsp a))
 requestingE = send @(Requester t req rsp) . Requesting
@@ -1034,90 +720,6 @@ requestingIdentityE = fmap R.coerceEvent . requestingE @t @req @Identity
 -- That justification is obsolete under the new 'AdjustableE'-driven
 -- fresh-runner-per-cohort design where each cohort re-invokes the
 -- sub-widget runner and gets fresh interpreters automatically.
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runRequesterLegacyIORef
-runRequesterLegacyIORef
-  :: forall x req rsp es a. (HasSpiderTimeline x, R.Reflex (SpiderTimeline x), IOE :> es)
-  => R.Event (SpiderTimeline x) (RequesterData rsp)
-  -> Eff (Requester (SpiderTimeline x) req rsp : es) a
-  -> Eff es (a, R.Event (SpiderTimeline x) (RequesterData req))
-runRequesterLegacyIORef responses act = do
-  let selector = R.fanInt (R.coerceEvent responses :: R.Event (SpiderTimeline x) (IntMap.IntMap Any))
-  stateRef <- liftIO (newIORef (RequesterState (-4) [] :: RequesterState (SpiderTimeline x) Any))
-  result <-
-    interpret
-      (\_ -> \case
-          Requesting evReqA -> liftIO $ do
-            state <- readIORef stateRef
-            let n = _requesterState_nextMyTag state
-                    .|. myTagTypeOffset (Proxy :: Proxy (Single Any))
-                evReqBoxed :: R.Event (SpiderTimeline x) Any
-                evReqBoxed = unsafeCoerce (R.fmapCheap singleEntry evReqA)
-            writeIORef stateRef $ state
-              { _requesterState_nextMyTag = _requesterState_nextMyTag state - 4
-              , _requesterState_requests  = (n, evReqBoxed) : _requesterState_requests state
-              }
-            pure (unsafeCoerce (R.selectInt selector n :: R.Event (SpiderTimeline x) Any))
-          Requesting_ evReqA -> liftIO $ do
-            System.IO.hPutStrLn System.IO.stderr "[eff-reflex] Requesting_ handler CALLED (tag alloc)"
-            System.IO.hFlush System.IO.stderr
-            state <- readIORef stateRef
-            let n = _requesterState_nextMyTag state
-                    .|. myTagTypeOffset (Proxy :: Proxy (Single Any))
-                evReqBoxed :: R.Event (SpiderTimeline x) Any
-                evReqBoxed = unsafeCoerce (R.fmapCheap singleEntry evReqA)
-            writeIORef stateRef $ state
-              { _requesterState_nextMyTag = _requesterState_nextMyTag state - 4
-              , _requesterState_requests  = (n, evReqBoxed) : _requesterState_requests state
-              }
-          RequestingBundled bundleEv -> liftIO $ do
-            state <- readIORef stateRef
-            let n = _requesterState_nextMyTag state
-                    .|. myTagTypeOffset (Proxy :: Proxy Multi)
-                evReqBoxed :: R.Event (SpiderTimeline x) Any
-                evReqBoxed = unsafeCoerce bundleEv
-            writeIORef stateRef $ state
-              { _requesterState_nextMyTag = _requesterState_nextMyTag state - 4
-              , _requesterState_requests  = (n, evReqBoxed) : _requesterState_requests state
-              }
-            pure (unsafeCoerce (R.selectInt selector n :: R.Event (SpiderTimeline x) Any))
-          RequestingBundled3 bundleEv -> liftIO $ do
-            -- Mirrors upstream 'requesting'' (Base/Internal.hs:461) usage
-            -- for Multi3 packing: allocate a tag with 'Multi3' type offset,
-            -- store the bundled 'Entry req Multi3' event coerced to 'Any'.
-            state <- readIORef stateRef
-            let n = _requesterState_nextMyTag state
-                    .|. myTagTypeOffset (Proxy :: Proxy Multi3)
-                evReqBoxed :: R.Event (SpiderTimeline x) Any
-                evReqBoxed = unsafeCoerce bundleEv
-            writeIORef stateRef $ state
-              { _requesterState_nextMyTag = _requesterState_nextMyTag state - 4
-              , _requesterState_requests  = (n, evReqBoxed) : _requesterState_requests state
-              }
-            pure (unsafeCoerce (R.selectInt selector n :: R.Event (SpiderTimeline x) Any)))
-      act
-  s <- liftIO $ do
-    s' <- readIORef stateRef
-    System.IO.hPutStrLn System.IO.stderr $
-      "[eff-reflex] runRequesterLegacyIORef SNAPSHOT: state.requests has "
-        <> show (length (_requesterState_requests s')) <> " entries"
-    System.IO.hFlush System.IO.stderr
-    pure s'
-  let aggEv = R.fmapCheap (RequesterData . TagMap) $
-                R.mergeInt $ IntMap.fromDistinctAscList (_requesterState_requests s)
-  liftIO $ do
-    System.IO.hPutStrLn System.IO.stderr $
-      "[eff-reflex] runRequesterLegacyIORef mergeInt subscribing to "
-        <> show (length (_requesterState_requests s))
-        <> " events (post-snapshot)"
-    System.IO.hFlush System.IO.stderr
-  pure (result, aggEv)
-
--- | Native Requester interpreter — Effectful analog of 'runRequesterT'
--- from 'Reflex.Requester.Base'. Body mirrors upstream 1:1: allocate a
--- 'MyTag', append the request to the state, look up the response via
--- 'fanInt'-ed selector. At the end, merge all requests into an
--- 'RequesterData' event.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runRequesterLegacyIORef
 runRequester
   :: forall t req rsp es a. (R.Reflex t, IOE :> es)
   => R.Event t (RequesterData rsp)
@@ -1210,112 +812,10 @@ runRequester responses act = do
   pure (result, aggEv)
 
 --------------------------------------------------------------------------------
--- Task #273 (2026-09-01): RESTORED and renamed to 'runPerformEventAndAdjustableM'.
--- Task #268 commented this out during the PerformEvent x → PerformEventEff migration.
--- Task #272 introduced PerformEventM (m polymorphic). This task restores the fused
--- runner adapted to PerformEventM (with m pinned to SpiderHostFrame x for the Spider
--- host case), which is what upstream 'runWithReplaceRequesterTWith' does verbatim:
--- fuses Adjustable + PerformEvent + Requester into ONE interpreter that owns the
--- cohort-pointer state so nested runWithReplace preserves per-cohort request scope
--- via Multi entries + fanInt/selectInt. Fixes delayedPulse crash (task #271).
---------------------------------------------------------------------------------
--- Fused PerformEvent + Adjustable interpreter (Fix Q for 24 failing
--- hydration-browser tests — see Task #122 diagnosis).
---
--- BUG (root cause): 'runRequester' above reads its 'stateRef' snapshot ONCE
--- at end of 'act' (line ~579), producing a STATIC 'mergeInt' aggregation
--- event. Late 'Requesting_' calls originating from replacement widgets
--- fired via 'runAdjustable/RunWithReplace' (at hydration switchover, or
--- from any nested 'runWithReplace') DO write to the shared IORef, but
--- the aggregation event was already sealed. Their events never propagate
--- to 'processAsyncEvents'.
---
--- FIX (Fix Q, mirrors upstream 'runWithReplaceRequesterTWith' at
--- eff-reflex/Requester/Base.hs:427-433): fuse PerformEvent + Adjustable
--- into ONE interpreter that owns the outer 'runRequester' scope. In
--- 'RunWithReplace', allocate a FRESH nested 'runRequester' scope for
--- each cohort (initial + each replacement fire), 'holdDynE' the current
--- cohort's aggregation event, and 'switchPromptlyDyn' to plug it into
--- the parent Requester via 'requestingE_' — matching upstream's
--- @requesting'@ + @switchPromptlyDyn@ pattern. Frame-synchronous.
---
--- Body implemented (Task #122, plan B): fuses PerformEvent + Adjustable
--- into ONE interpreter that owns outer Requester scope. RunWithReplace
--- uses per-cohort fresh scope via 'cohortPtr' swap + rec-tied bundled
--- tag + inline Spider replacement (mirrors 'runAdjustable' body). Three
--- traverse variants inline the same Spider replacement pattern without
--- cohort wrapping (MVP — the failing HydrationBrowser tests use
--- RunWithReplace only). No 'Adjustable :> es' constraint required —
--- the fused runner IS the Adjustable interpreter for this row.
 
---------------------------------------------------------------------------------
--- Shared cohort machinery — REVERTED, WRONG DESIGN.
---
--- I first extracted 'CohortPtr = IORef (IORef (RequesterState ...), ...)'
--- + 'allocTagCohort' / 'runInCohortIO' / 'requesterCohortHandler' /
--- 'performEventCohortHandler' to top-level so both the old and new
--- fused runners could share cohort machinery.
---
--- User pushback: "if upstream doesnt put RequesterState and
--- EventSelectorInt behind IORefs then we should not be either." Correct
--- observation — upstream is 'StateT (RequesterState) (ReaderT
--- (EventSelectorInt) m)', ZERO IORefs at the type level (verified at
--- vendor/reflex/src/Reflex/Requester/Base/Internal.hs:273-279).
---
--- The pre-existing 'runRequester' + 'runPerformEventAndAdjustable' both
--- use IORefs for these — a port-specific deviation to bridge Spider's
--- 'pushCheap' callback boundary. Keeping THAT as-is (tests depend on
--- it) but NOT propagating the deviation into the new 'AdjustableE'
--- design. The new design uses 'Effectful.State.Static.Local' +
--- 'Effectful.Reader.Static' — upstream-faithful — with per-cohort
--- 'evalState . runReader' scopes and 'withEffToIO' to cross the pushCheap
--- boundary.
---
--- Kept commented (per "no deletions" rule) as a record of the wrong turn.
---
--- type CohortPtr x =
---   IORef ( IORef (RequesterState (SpiderTimeline x) Any)
---         , R.EventSelectorInt (SpiderTimeline x) Any
---         )
---
--- allocTagCohort
---   :: forall xtype x. MyTagTypeOffset xtype
---   => CohortPtr x
---   -> R.Event (SpiderTimeline x) Any
---   -> IO Int
--- allocTagCohort ptr ev = do
---   (ref, _sel) <- readIORef ptr
---   state <- readIORef ref
---   let n = _requesterState_nextMyTag state
---           .|. myTagTypeOffset (Proxy :: Proxy xtype)
---   writeIORef ref $ state
---     { _requesterState_nextMyTag = _requesterState_nextMyTag state - 4
---     , _requesterState_requests  = (n, ev) : _requesterState_requests state
---     }
---   pure n
---
--- runInCohortIO
---   :: forall x r.
---      CohortPtr x
---   -> R.EventSelectorInt (SpiderTimeline x) Any
---   -> IO r
---   -> IO (r, R.Event (SpiderTimeline x) (IntMap.IntMap Any))
--- runInCohortIO cohortPtr cohortSel runChild = do
---   freshStateRef <- newIORef (RequesterState (-4) [])
---   old <- readIORef cohortPtr
---   writeIORef cohortPtr (freshStateRef, cohortSel)
---   r <- runChild
---   writeIORef cohortPtr old
---   s <- readIORef freshStateRef
---   let mergedEv = R.mergeInt $ IntMap.fromDistinctAscList
---         (_requesterState_requests s)
---   pure (r, mergedEv)
---
--- requesterCohortHandler and performEventCohortHandler followed similar
--- IORef-swap shape; omitted here for brevity but same rationale for
--- reverting.
---------------------------------------------------------------------------------
-
+-- | Interpret PerformEvent, Adjustable and Requester together. Each
+-- replacement cohort owns its request state and response selector; bundled
+-- requests keep nested replacements connected to the parent event stream.
 runPerformEventAndAdjustableM
   :: forall x es a.
      ( HasSpiderTimeline x
@@ -1991,7 +1491,6 @@ runPerformEventAndAdjustableM responses act = do
                   combinedMapEv
         pure (m0', dmapPatchEv)
 
--- END task #273 restored fused runner (see BEGIN marker above)
 
 --------------------------------------------------------------------------------
 -- Native PerformEvent effect
@@ -2010,62 +1509,6 @@ runPerformEventAndAdjustableM responses act = do
 --   performEvent  = PerformEventT . requestingIdentity
 --------------------------------------------------------------------------------
 
-{- BEGIN COMMENTED-OUT OLD PerformEvent x SURFACE (superseded by PerformEventEff below).
-
-Task #268 (user directive 2026-08-31): commented out entirely, replaced with
-row-parameterized 'PerformEventEff subEs t'. The 'SpiderHostFrame x' callback
-monad was the wrong abstraction — upstream MTL exposes callback monad via the
-'Performable m' type family; we mirror that with a row parameter 'subEs'.
-
-Preserved as comment (no-shortcuts rule: don't delete work, name deferral).
-The internal drain-loop machinery still needs its consumers ported to the new
-effect; that migration happens in subsequent waves of task #268.
-
-data PerformEvent (x :: Type) :: Effect where
-  PerformEventE_ :: R.Event (SpiderTimeline x) (SI.SpiderHostFrame x ())
-                 -> PerformEvent x m ()
-  PerformEventE  :: R.Event (SpiderTimeline x) (SI.SpiderHostFrame x a)
-                 -> PerformEvent x m (R.Event (SpiderTimeline x) a)
-type instance E.DispatchOf (PerformEvent x) = E.Dynamic
-
-performEventE_ :: forall x es. (PerformEvent x :> es)
-               => R.Event (SpiderTimeline x) (SI.SpiderHostFrame x ()) -> Eff es ()
-performEventE_ = send @(PerformEvent x) . PerformEventE_
-
-performEventE :: forall x es a. (PerformEvent x :> es)
-              => R.Event (SpiderTimeline x) (SI.SpiderHostFrame x a)
-              -> Eff es (R.Event (SpiderTimeline x) a)
-performEventE = send @(PerformEvent x) . PerformEventE
-
-runPerformEvent
-  :: forall x es a. (HasSpiderTimeline x, R.Reflex (SpiderTimeline x), IOE :> es)
-  => R.Event (SpiderTimeline x) (RequesterData Identity)
-  -> Eff (PerformEvent x : es) a
-  -> Eff es (a, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x)))
-runPerformEvent responses act =
-  reinterpret
-    (runRequester @(SpiderTimeline x) @(SI.SpiderHostFrame x) @Identity responses)
-    (\_ -> \case
-        PerformEventE_ ev ->
-          requestingE_ @(SpiderTimeline x) @(SI.SpiderHostFrame x) @Identity ev
-        PerformEventE ev ->
-          requestingIdentityE @(SpiderTimeline x) @(SI.SpiderHostFrame x) ev)
-    act
-
-interpretPerformEventAsRequester
-  :: forall x es a.
-     ( HasSpiderTimeline x
-     , R.Reflex (SpiderTimeline x)
-     , Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity :> es
-     )
-  => Eff (PerformEvent x : es) a -> Eff es a
-interpretPerformEventAsRequester = interpret $ \_ -> \case
-  PerformEventE_ ev ->
-    requestingE_ @(SpiderTimeline x) @(SI.SpiderHostFrame x) @Identity ev
-  PerformEventE ev ->
-    requestingIdentityE @(SpiderTimeline x) @(SI.SpiderHostFrame x) ev
-
-END COMMENTED-OUT OLD PerformEvent x SURFACE -}
 
 --------------------------------------------------------------------------------
 -- Row-parameterized PerformEvent effect ('Performable m' analog)
@@ -2290,7 +1733,7 @@ interpretPerformEventMAsRequester = interpret $ \_ -> \case
     requestingIdentityE @t @m ev
 
 --------------------------------------------------------------------------------
--- Higher-order 'PerformEventH t' effect (task #273 final design).
+-- Higher-order 'PerformEventH t' effect.
 --
 -- Callback monad @m@ is the CURRENT ambient monad (higher-order effect
 -- pattern, same shape as Adjustable's 'RunWithReplace :: m a -> Event t (m b)
@@ -2581,115 +2024,6 @@ runHostFrame = interpret $ \_ -> \case
 -- forks.
 --
 -- Requires @PerformEvent x :> es@ to enqueue the drain-time reader.
-{- BEGIN OLD-PERFORMEVENT-COMMENTED-OUT runAdjustable (superseded by version below).
-Task #268 (2026-09-01): OLD 'PerformEvent x' constraint + 'performEventE @x $ SpiderHostFrame $ EventM ...' bodies
-migrated to row-parameterized 'PerformEventEff subEs t' + 'performEventEffE @subEs $ liftIO ...' bodies.
-Preserved verbatim as the reference for the new version below.
-
-runAdjustable
-  :: forall x es a. ( HasSpiderTimeline x
-                    , IOE :> es
-                    , PerformEvent x :> es
-                    )
-  => Eff (Adjustable (SpiderTimeline x) : es) a -> Eff es a
-runAdjustable = interpret $ \env -> \case
-  RunWithReplace a0 a' -> do
-    (x0, triggerEv, resultRef) <- localUnliftIO env SeqForkUnlift $ \unlift -> do
-      x0 <- unlift a0
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\newAction -> do
-                val <- liftIO (unlift newAction)
-                liftIO (writeIORef ref (Just val))
-                pure (Just ()))
-            (SI.unSpiderEvent a')
-      pure (x0, triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef resultRef
-          writeIORef resultRef Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustable/RunWithReplace: result IORef empty at drain (impossible)")
-      triggerEv
-    pure (x0, outEv)
-  TraverseIntMapWithKeyWithAdjustOp f m0 pev -> do
-    (m0', triggerEv, resultRef) <- localUnliftIO env SeqForkUnlift $ \unlift -> do
-      m0' <- IntMap.traverseWithKey (\k v -> unlift (f k v)) m0
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchIntMap patch) -> do
-                newInner <- liftIO $ IntMap.traverseWithKey
-                  (\k mv -> traverse (unlift . f k) mv)
-                  patch
-                liftIO (writeIORef ref (Just (PatchIntMap newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (m0', triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef resultRef
-          writeIORef resultRef Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustable/TraverseIntMap: result IORef empty at drain (impossible)")
-      triggerEv
-    pure (m0', outEv)
-  TraverseDMapWithKeyWithAdjustOp f m0 pev -> do
-    (m0', triggerEv, resultRef) <- localUnliftIO env SeqForkUnlift $ \unlift -> do
-      m0' <- DMap.traverseWithKey (\k v -> unlift (f k v)) m0
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchDMap patch) -> do
-                newInner <- liftIO $ DMap.traverseWithKey
-                  (\k (ComposeMaybe mv) ->
-                      ComposeMaybe <$> traverse (unlift . f k) mv)
-                  patch
-                liftIO (writeIORef ref (Just (PatchDMap newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (m0', triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef resultRef
-          writeIORef resultRef Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustable/TraverseDMap: result IORef empty at drain (impossible)")
-      triggerEv
-    pure (m0', outEv)
-  TraverseDMapWithKeyWithAdjustWithMoveOp f m0 pev -> do
-    (m0', triggerEv, resultRef) <- localUnliftIO env SeqForkUnlift $ \unlift -> do
-      m0' <- DMap.traverseWithKey (\k v -> unlift (f k v)) m0
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchDMapWithMove patch) -> do
-                newInner <- liftIO $ DMap.traverseWithKey
-                  (\k node -> do
-                      newFrom <- case _nodeInfo_from node of
-                        From_Insert v -> From_Insert <$> unlift (f k v)
-                        From_Delete   -> pure From_Delete
-                        From_Move src -> pure (From_Move src)
-                      pure NodeInfo
-                        { _nodeInfo_from = newFrom
-                        , _nodeInfo_to   = _nodeInfo_to node
-                        })
-                  patch
-                liftIO (writeIORef ref (Just (PatchDMapWithMove newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (m0', triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef resultRef
-          writeIORef resultRef Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustable/TraverseDMapWithMove: result IORef empty at drain (impossible)")
-      triggerEv
-    pure (m0', outEv)
-
-END OLD-PERFORMEVENT-COMMENTED-OUT runAdjustable -}
 
 runAdjustable
   :: forall subEs x es a.
@@ -2797,7 +2131,7 @@ runAdjustable = interpret $ \env -> \case
     pure (m0', outEv)
 
 --------------------------------------------------------------------------------
--- 'runAdjustableM' — task #272 variant of 'runAdjustable' that schedules
+-- 'runAdjustableM' — variant of 'runAdjustable' that schedules
 -- drain callbacks through 'PerformEventM m t' (arbitrary callback monad
 -- @m@) instead of 'PerformEventEff subEs t' (row-shaped callback).
 --
@@ -2960,855 +2294,6 @@ runAdjustableM = interpret $ \env -> \case
 -- preferring the older PerformEvent-based drain shape.
 --------------------------------------------------------------------------------
 
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableEChanBased
-runAdjustableEChanBased
-  :: forall x sub es a.
-     ( HasSpiderTimeline x
-     , IOE :> es
-     , SubscribeEvent (SpiderTimeline x) :> es
-     )
-  => Chan [DSum (EventTriggerRef (SpiderTimeline x)) TriggerInvocation]
-     -- ^ shared trigger-event chan (same one 'runTriggerEvent' uses)
-  -> (forall y. Eff sub y -> Eff es y)
-     -- ^ Option B runner: Eff-native, per-cohort fresh via re-invocation
-  -> Eff (AdjustableE sub (SpiderTimeline x) : es) a
-  -> Eff es a
-runAdjustableEChanBased chan runSubWidget = interpret $ \_env -> \case
-  RunWithReplace' a0 a' -> do
-    x0 <- runSubWidget a0
-    -- Raw trigger for cohort drain — mirrors 'runTriggerEvent's
-    -- 'NewTriggerEvent' body (lines 1978-1985).
-    (outEv, fireOut) <- liftIO $ do
-      rt <- newIORef Nothing
-      ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-        writeIORef rt (Just t)
-        pure (writeIORef rt Nothing))
-      let fire a = writeChan chan
-            [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-      pure (ev, fire)
-    -- pushCheap: on replacement fire, run the new cohort's runner
-    -- (fresh interpreter installation → fresh scope for all sub effects),
-    -- then fire the drain trigger with the result.
-    -- SeqForkUnlift (not ConcUnlift Persistent Unlimited): the Spider
-    -- trigger fires asynchronously long after 'withEffToIO' returns,
-    -- and some effects in the widget stack (State.Static.Local,
-    -- Reader.Local) cannot survive Persistent unlift across such a
-    -- boundary — they version-check on entry and blow up with
-    -- "version (N) /= storageVersion (0)" when the stored env has been
-    -- torn down. SeqForkUnlift instead forks a fresh thread per unlift
-    -- call, threading the effect stack through a per-call replica;
-    -- state writes in the fork are dropped, which is the correct
-    -- semantics for a per-cohort widget rebuild (each firing is an
-    -- independent scope).
-    triggerPropEv <- withEffToIO E.SeqForkUnlift
-      $ \runOuterInIO -> do
-        let subInIO :: forall y. Eff sub y -> IO y
-            subInIO = runOuterInIO . runSubWidget
-        let te = SI.SpiderEvent $ SI.pushCheap
-              (\newAction -> do
-                  liftIO $ do
-                    val <- subInIO newAction
-                    fireOut val
-                  pure (Just ()))
-              (SI.unSpiderEvent a')
-        pure te
-    -- Keep triggerPropEv in the reactive graph — otherwise pushCheap
-    -- is dead code (Reflex garbage collects unsubscribed events).
-    _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-    pure (x0, outEv)
-
-  TraverseIntMapWithKeyWithAdjust' f m0 pev -> do
-    m0' <- IntMap.traverseWithKey (\k v -> runSubWidget (f k v)) m0
-    (outEv, fireOut) <- liftIO $ do
-      rt <- newIORef Nothing
-      ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-        writeIORef rt (Just t)
-        pure (writeIORef rt Nothing))
-      let fire a = writeChan chan
-            [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-      pure (ev, fire)
-    -- SeqForkUnlift: see runWithReplaceDirect for rationale.
-    triggerPropEv <- withEffToIO E.SeqForkUnlift
-      $ \runOuterInIO -> do
-        let subInIO :: forall y. Eff sub y -> IO y
-            subInIO = runOuterInIO . runSubWidget
-        let te = SI.SpiderEvent $ SI.pushCheap
-              (\(PatchIntMap patch) -> do
-                  newInner <- liftIO $ IntMap.traverseWithKey
-                    (\k mv -> traverse (subInIO . f k) mv)
-                    patch
-                  liftIO $ fireOut (PatchIntMap newInner)
-                  pure (Just ()))
-              (SI.unSpiderEvent pev)
-        pure te
-    _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-    pure (m0', outEv)
-
-  TraverseDMapWithKeyWithAdjust' f m0 pev -> do
-    m0' <- DMap.traverseWithKey (\k v -> runSubWidget (f k v)) m0
-    (outEv, fireOut) <- liftIO $ do
-      rt <- newIORef Nothing
-      ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-        writeIORef rt (Just t)
-        pure (writeIORef rt Nothing))
-      let fire a = writeChan chan
-            [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-      pure (ev, fire)
-    -- SeqForkUnlift: see runWithReplaceDirect for rationale.
-    triggerPropEv <- withEffToIO E.SeqForkUnlift
-      $ \runOuterInIO -> do
-        let subInIO :: forall y. Eff sub y -> IO y
-            subInIO = runOuterInIO . runSubWidget
-        let te = SI.SpiderEvent $ SI.pushCheap
-              (\(PatchDMap patch) -> do
-                  newInner <- liftIO $ DMap.traverseWithKey
-                    (\k (ComposeMaybe mv) ->
-                        ComposeMaybe <$> traverse (subInIO . f k) mv)
-                    patch
-                  liftIO $ fireOut (PatchDMap newInner)
-                  pure (Just ()))
-              (SI.unSpiderEvent pev)
-        pure te
-    _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-    pure (m0', outEv)
-
-  TraverseDMapWithKeyWithAdjustWithMove' f m0 pev -> do
-    m0' <- DMap.traverseWithKey (\k v -> runSubWidget (f k v)) m0
-    (outEv, fireOut) <- liftIO $ do
-      rt <- newIORef Nothing
-      ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-        writeIORef rt (Just t)
-        pure (writeIORef rt Nothing))
-      let fire a = writeChan chan
-            [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-      pure (ev, fire)
-    -- SeqForkUnlift: see runWithReplaceDirect for rationale.
-    triggerPropEv <- withEffToIO E.SeqForkUnlift
-      $ \runOuterInIO -> do
-        let subInIO :: forall y. Eff sub y -> IO y
-            subInIO = runOuterInIO . runSubWidget
-        let te = SI.SpiderEvent $ SI.pushCheap
-              (\(PatchDMapWithMove patch) -> do
-                  newInner <- liftIO $ DMap.traverseWithKey
-                    (\k node -> do
-                        newFrom <- case _nodeInfo_from node of
-                          From_Insert v -> From_Insert <$> subInIO (f k v)
-                          From_Delete   -> pure From_Delete
-                          From_Move src -> pure (From_Move src)
-                        pure NodeInfo
-                          { _nodeInfo_from = newFrom
-                          , _nodeInfo_to   = _nodeInfo_to node
-                          })
-                    patch
-                  liftIO $ fireOut (PatchDMapWithMove newInner)
-                  pure (Just ()))
-              (SI.unSpiderEvent pev)
-        pure te
-    _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-    pure (m0', outEv)
-
---------------------------------------------------------------------------------
--- 'runAdjustableE' — UPSTREAM-FAITHFUL interpreter for 'AdjustableE'.
---
--- Mirrors 'Reflex.Requester.Base.runWithReplaceRequesterTWith' at
--- @deps/jenga/lib/eff-reflex/src/Reflex/Requester/Base.hs:432@ exactly —
--- ports the same 'rec' + 'requestingBundledE' + 'fanInt' + 'holdDynE' +
--- 'switchPromptlyDyn' machinery that upstream uses for cross-cohort
--- Requester response routing. The Multi tag bundles current cohort's
--- requests at the OUTER Requester scope; per-cohort responses come back
--- via 'fanInt' by cohort id N.
---
--- Contrast with 'runAdjustableEChanBased' above: that one has documented
--- semantic gaps (traverse-variant aggActions loss; nested Requester
--- across cohorts unsupported). This version restores upstream fidelity
--- for RunWithReplace'. TRAVERSE VARIANTS still delegate to the chan-based
--- helper for now — they need Multi2/Multi3 tag machinery per upstream
--- 'traverseIntMapWithKeyWithAdjustRequesterTWith' (Base.hs:460+) and
--- 'traverseDMapWithKeyWithAdjustRequesterTWith' (Base.hs:481+). Follow-on.
---
--- Runner signature: response-aware. Takes per-cohort response event as
--- first arg; discharges child's 'runPerformEvent' with that slice, giving
--- fresh per-cohort Requester scope for child performEvent calls. Returns
--- (child result, per-cohort aggregated requests).
---
--- Requires 'Requester (SpiderTimeline x) (SpiderHostFrame x) Identity :> es'
--- at OUTER for 'requestingBundledE' — mirrors upstream where the outer
--- monad IS RequesterT.
---------------------------------------------------------------------------------
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableEChanBased
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableE
-runAdjustableE
-  :: forall x sub es a.
-     ( HasSpiderTimeline x
-     , R.Reflex (SpiderTimeline x)
-     , IOE :> es
-     , Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity :> es
-     , Hold (SpiderTimeline x) :> es
-     , Sample (SpiderTimeline x) :> es
-     , SubscribeEvent (SpiderTimeline x) :> es
-     )
-  => Chan [DSum (EventTriggerRef (SpiderTimeline x)) TriggerInvocation]
-     -- ^ chan for internal drain triggers (same one runTriggerEvent uses)
-  -> (forall y.
-         R.Event (SpiderTimeline x) (RequesterData Identity)
-      -> Eff sub y
-      -> Eff es (y, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x))))
-     -- ^ response-aware runner: takes per-cohort response event, discharges
-     --   sub effects (fresh per invocation → fresh Requester scope per cohort),
-     --   returns (child result, per-cohort aggregated requests)
-  -> Eff (AdjustableE sub (SpiderTimeline x) : es) a
-  -> Eff es a
-runAdjustableE chan runSubWidget = interpret $ \_env -> \case
-  RunWithReplace' a0 a' -> do
-    -- Number replacements starting from 1 (initial is cohort 0).
-    -- Mirrors upstream Base.hs:433 'numberOccurrencesFrom 1 a''.
-    na' <- R.numberOccurrencesFrom (1 :: Int) a'
-
-    rec
-        -- Register bundled requests at OUTER Requester scope (Multi tag).
-        -- Mirrors upstream Base.hs:434 'requesting' $ fmapCheap multiEntry
-        -- $ switchPromptlyDyn requests'.
-        responsesBundledE <- requestingBundledE @(SpiderTimeline x)
-          @(SI.SpiderHostFrame x) @Identity
-          (R.fmapCheap multiEntry (RD.switchPromptlyDyn requestsDyn))
-
-        -- Fan responses by cohort id. Mirrors upstream Base.hs:435
-        -- 'let responses' = fanInt responses'.
-        let responses' :: R.EventSelectorInt (SpiderTimeline x) (RequesterData Identity)
-            responses' = R.fanInt (R.fmapCheap unMultiEntry responsesBundledE)
-
-        -- Initial cohort (cohort 0): run with slice 0 of responses.
-        -- Mirrors upstream Base.hs:436 'f (runRequesterT a0 (selectInt responses' 0))'.
-        (x0, req0) <- runSubWidget (R.selectInt responses' 0) a0
-
-        -- Replacement cohorts: for each numbered fire, run with slice n.
-        -- Mirrors upstream Base.hs:436 second arg
-        -- 'fmapCheap (\(n, a) -> fmap ((,) n) $ runRequesterT a $ selectInt responses' n) na''.
-        -- Implemented via pushCheap (build-time cohort construction) + raw
-        -- trigger fire on chan (drain scheduling by mainLoop in fresh frame).
-        v' <- scheduleReplacementCohorts @x chan runSubWidget responses' na'
-
-        -- Combine cohort requests into single Dynamic. Each cohort N's
-        -- reqs event wrapped in 'IntMap.singleton n'. Mirrors upstream
-        -- Base.hs:437 'holdDyn (fmapCheap (IntMap.singleton 0) requests0)
-        -- (fmapCheap (\(n, (_, reqs)) -> fmapCheap (IntMap.singleton n) reqs) v')'.
-        requestsDyn <- holdDynE
-          (R.fmapCheap (IntMap.singleton 0) req0)
-          (R.fmapCheap (\(n, (_, r)) -> R.fmapCheap (IntMap.singleton n) r) v')
-
-    -- Return initial result + replacement-result event. Mirrors upstream
-    -- Base.hs:438 'return (result0, fmapCheap (fst . snd) v')'.
-    pure (x0, R.fmapCheap (fst . snd) v')
-
-  -- Fix #1 Multi3 upgrade — per-element k × per-cohort n dispatch.
-  -- Mirrors OLD 'runPerformEventAndAdjustable.TraverseIntMapWithKeyWithAdjustOp'
-  -- (~HeadlessEffectful.hs:1507) which uses Multi tag with unsafeCoerce
-  -- to reinterpret as IntMap-of-IntMap. Solves the tag-namespace collision
-  -- when an element at key k is replaced across patches: without cohort n
-  -- dimension the newer widget's response tags overlap the older widget's.
-  TraverseIntMapWithKeyWithAdjust' @_ @_ @v' f m0 pev -> do
-    numberedPev <- R.numberOccurrencesFrom (1 :: Int) pev
-    rec
-        -- Register bundled aggregation. Each element's aggEv is tagged
-        -- with its cohort n via 'IntMap.singleton n', so mergedRequests
-        -- carries a 2-level structure: IntMap k (IntMap n (RequesterData ...)).
-        -- Treated as opaque Multi (unsafeCoerce) — response side unwinds
-        -- via fanInt-then-fanInt (see mkElementResp below).
-        responseEv <- requestingBundledE @(SpiderTimeline x)
-          @(SI.SpiderHostFrame x) @Identity
-          (R.fmapCheap multiEntry (unsafeCoerce mergedRequests))
-
-        let cohortRespEv :: R.Event (SpiderTimeline x) (IntMap.IntMap Any)
-            cohortRespEv = unsafeCoerce (R.fmapCheap unMultiEntry responseEv)
-            cohortLevelASel :: R.EventSelectorInt (SpiderTimeline x) Any
-            cohortLevelASel = R.fanInt cohortRespEv
-            -- mkElementResp k n: response for element at key k in cohort n.
-            -- Peel outer IntMap k via fanInt, then filter to cohort n via
-            -- 'mapMaybeCheap (IntMap.lookup n)'. Result is per-element
-            -- 'RequesterData Identity' for runSubWidget to consume.
-            mkElementResp :: IntMap.Key -> Int -> R.Event (SpiderTimeline x) (RequesterData Identity)
-            mkElementResp k n =
-              let perKeyEv :: R.Event (SpiderTimeline x) (IntMap.IntMap Any)
-                  perKeyEv = unsafeCoerce (R.selectInt cohortLevelASel k)
-                  perElementEv :: R.Event (SpiderTimeline x) Any
-                  perElementEv = unsafeCoerce (R.mapMaybeCheap (IntMap.lookup n) perKeyEv)
-              in unsafeCoerce perElementEv
-
-        -- Initial elements: cohort n=0. Each aggregated aggEv wrapped
-        -- 'IntMap.singleton 0 aggEv' to survive the per-cohort filter.
-        initial :: IntMap.IntMap
-          ( R.Event (SpiderTimeline x) (IntMap.IntMap (RequesterData (SI.SpiderHostFrame x)))
-          , v'
-          ) <- IntMap.traverseWithKey
-          (\k v -> do
-              (r, agg) <- runSubWidget (mkElementResp k 0) (f k v)
-              pure (R.fmapCheap (IntMap.singleton 0) agg, r))
-          m0
-
-        let initialReqs :: IntMap.IntMap
-              (R.Event (SpiderTimeline x) (IntMap.IntMap (RequesterData (SI.SpiderHostFrame x))))
-            initialReqs = fmap fst initial
-
-        (patchEv, firePatch) <- liftIO $ do
-          rt <- newIORef Nothing
-          ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing))
-          let fire a = writeChan chan
-                [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-          pure (ev, fire)
-        triggerPropEv <- withEffToIO E.SeqForkUnlift
-          $ \runOuterInIO -> do
-            let te = SI.SpiderEvent $ SI.pushCheap
-                  (\(n, PatchIntMap patch) -> do
-                      newInner
-                        :: IntMap.IntMap
-                             (Maybe (R.Event (SpiderTimeline x)
-                                       (IntMap.IntMap (RequesterData (SI.SpiderHostFrame x))), v'))
-                        <- liftIO $ IntMap.traverseWithKey
-                        (\k mv -> traverse (\v -> do
-                            (r, agg) <- runOuterInIO
-                              (runSubWidget (mkElementResp k n) (f k v))
-                            pure (R.fmapCheap (IntMap.singleton n) agg, r)) mv)
-                        patch
-                      liftIO $ firePatch (PatchIntMap newInner)
-                      pure (Just ()))
-                  (SI.unSpiderEvent numberedPev)
-            pure te
-        _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-
-        let requests' :: R.Event (SpiderTimeline x)
-              (R.PatchIntMap (R.Event (SpiderTimeline x) (IntMap.IntMap (RequesterData (SI.SpiderHostFrame x)))))
-            requests' = R.fmapCheap (fmap fst) patchEv
-            result' :: R.Event (SpiderTimeline x) (R.PatchIntMap v')
-            result' = R.fmapCheap (fmap snd) patchEv
-
-        requestsIncr <- holdIncrementalE initialReqs requests'
-
-        let mergedRequests
-              :: R.Event (SpiderTimeline x) (IntMap.IntMap (IntMap.IntMap (RequesterData (SI.SpiderHostFrame x))))
-            mergedRequests = R.mergeIntIncremental requestsIncr
-
-    let m0' :: IntMap.IntMap v'
-        m0' = fmap snd initial
-    pure (m0', result')
-
-  TraverseDMapWithKeyWithAdjust' @k f m0 pev -> do
-    -- Fix #3 + Fix #4 port: Multi2/fanMap machinery + promptRequests.
-    -- Mirrors upstream traverseDMapWithKeyWithAdjustRequesterTWith
-    -- (vendor/reflex/src/Reflex/Requester/Base/Internal.hs:481-504) and
-    -- OLD 'runPerformEventAndAdjustable.TraverseDMapWithKeyWithAdjustOp'
-    -- (~HeadlessEffectful.hs:1642). Adapted for AdjustableE's
-    -- response-aware 'runSubWidget'.
-    numberedPev <- R.numberOccurrencesFrom (1 :: Int) pev
-    rec responseEv <- requestingBundledE @(SpiderTimeline x)
-          @(SI.SpiderHostFrame x) @Identity
-          (R.fmapCheap
-            (unsafeCoerce
-             . (\m -> Entry (Multi2Contents
-                              { _multi2Contents_dict = Dict
-                              , _multi2Contents_values = unsafeCoerce m
-                              })
-                    :: Entry Any (Multi2 k)))
-            combinedMapEv)
-        let respMap :: R.Event (SpiderTimeline x) (Map.Map (Some k) (IntMap.IntMap (IntMap.IntMap Any)))
-            respMap = R.fmapCheap
-              (unsafeCoerce . _multi2Contents_values . unEntry
-                . (unsafeCoerce :: Entry Identity Multi -> Entry Identity (Multi2 k)))
-              responseEv
-            respMapSel :: R.EventSelector (SpiderTimeline x) (Const2 (Some k) (IntMap.IntMap (IntMap.IntMap Any)))
-            respMapSel = R.fanMap respMap
-            mkElementResp :: Some k -> Int -> R.Event (SpiderTimeline x) (RequesterData Identity)
-            mkElementResp sk n =
-              let perKeyEv :: R.Event (SpiderTimeline x) (IntMap.IntMap (IntMap.IntMap Any))
-                  perKeyEv = R.select respMapSel (Const2 sk)
-                  perElementEv :: R.Event (SpiderTimeline x) (IntMap.IntMap Any)
-                  perElementEv = R.mapMaybeCheap (IntMap.lookup n) perKeyEv
-              in unsafeCoerce perElementEv
-        initialAgg <- liftIO $ newIORef Map.empty
-        m0' <- DMap.traverseWithKey (\k v -> do
-            (r, mergedEv) <- runSubWidget (mkElementResp (Some k) 0) (f k v)
-            liftIO $ modifyIORef' initialAgg
-              (Map.insert (Some k)
-                (R.fmapCheap (IntMap.singleton 0) (unsafeCoerce mergedEv
-                  :: R.Event (SpiderTimeline x) (IntMap.IntMap Any))))
-            pure r
-          ) m0
-        eventMap0 <- liftIO $ readIORef initialAgg
-        (patchEv, firePatch) <- liftIO $ do
-          rt <- newIORef Nothing
-          ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing))
-          let fire a = writeChan chan
-                [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-          pure (ev, fire)
-        triggerPropEv <- withEffToIO E.SeqForkUnlift
-          $ \runOuterInIO -> do
-            let te = SI.SpiderEvent $ SI.pushCheap
-                  (\(n, PatchDMap patch) -> do
-                      patchAgg <- liftIO $ newIORef Map.empty
-                      newInner <- liftIO $ DMap.traverseWithKey
-                        (\k (ComposeMaybe mv) -> case mv of
-                          Nothing -> do
-                            modifyIORef' patchAgg
-                              (Map.insert (Some k) Nothing)
-                            pure (ComposeMaybe Nothing)
-                          Just v -> do
-                            (r, mergedEv) <- runOuterInIO
-                              (runSubWidget (mkElementResp (Some k) n) (f k v))
-                            modifyIORef' patchAgg
-                              (Map.insert (Some k)
-                                (Just (R.fmapCheap (IntMap.singleton n)
-                                  (unsafeCoerce mergedEv
-                                    :: R.Event (SpiderTimeline x) (IntMap.IntMap Any)))))
-                            pure (ComposeMaybe (Just r)))
-                        patch
-                      patchEvents <- liftIO $ readIORef patchAgg
-                      liftIO $ firePatch (PatchDMap newInner, PatchMap patchEvents)
-                      pure (Just ()))
-                  (SI.unSpiderEvent numberedPev)
-            pure te
-        _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-        let dmapPatchEv = R.fmapCheap fst patchEv
-            eventPatchMap :: R.Event (SpiderTimeline x) (PatchMap (Some k) (R.Event (SpiderTimeline x) (IntMap.IntMap (IntMap.IntMap Any))))
-            eventPatchMap = R.fmapCheap snd patchEv
-        requestsIncr <- holdIncrementalE eventMap0 eventPatchMap
-        let mergedMapEv = R.mergeMapIncremental requestsIncr
-            promptRequests = R.coincidence $ R.fmapCheap
-              (\(PatchMap p) -> R.mergeMap (Map.mapMaybe id p))
-              eventPatchMap
-            combinedMapEv :: R.Event (SpiderTimeline x) (Map.Map (Some k) (IntMap.IntMap (IntMap.IntMap Any)))
-            combinedMapEv = R.mergeWith
-              (Map.unionWith (IntMap.unionWith IntMap.union))
-              [promptRequests, mergedMapEv]
-    pure (m0', dmapPatchEv)
-
-  TraverseDMapWithKeyWithAdjustWithMove' @k f m0 pev -> do
-    -- Fix #3 + Fix #4 port with move semantics. Mirrors OLD
-    -- 'runPerformEventAndAdjustable.TraverseDMapWithKeyWithAdjustWithMoveOp'
-    -- (~HeadlessEffectful.hs:1735). Adapted for AdjustableE's
-    -- response-aware 'runSubWidget'. PatchMapWithMove handles From_Insert
-    -- (new element — invoke runSubWidget), From_Delete (mark null), From_Move
-    -- (relocate existing element event without re-running).
-    numberedPev <- R.numberOccurrencesFrom (1 :: Int) pev
-    rec responseEv <- requestingBundledE @(SpiderTimeline x)
-          @(SI.SpiderHostFrame x) @Identity
-          (R.fmapCheap
-            (unsafeCoerce
-             . (\m -> Entry (Multi2Contents
-                              { _multi2Contents_dict = Dict
-                              , _multi2Contents_values = unsafeCoerce m
-                              })
-                    :: Entry Any (Multi2 k)))
-            combinedMapEv)
-        let respMap :: R.Event (SpiderTimeline x) (Map.Map (Some k) (IntMap.IntMap (IntMap.IntMap Any)))
-            respMap = R.fmapCheap
-              (unsafeCoerce . _multi2Contents_values . unEntry
-                . (unsafeCoerce :: Entry Identity Multi -> Entry Identity (Multi2 k)))
-              responseEv
-            respMapSel :: R.EventSelector (SpiderTimeline x) (Const2 (Some k) (IntMap.IntMap (IntMap.IntMap Any)))
-            respMapSel = R.fanMap respMap
-            mkElementResp :: Some k -> Int -> R.Event (SpiderTimeline x) (RequesterData Identity)
-            mkElementResp sk n =
-              let perKeyEv :: R.Event (SpiderTimeline x) (IntMap.IntMap (IntMap.IntMap Any))
-                  perKeyEv = R.select respMapSel (Const2 sk)
-                  perElementEv :: R.Event (SpiderTimeline x) (IntMap.IntMap Any)
-                  perElementEv = R.mapMaybeCheap (IntMap.lookup n) perKeyEv
-              in unsafeCoerce perElementEv
-        initialAgg <- liftIO $ newIORef Map.empty
-        m0' <- DMap.traverseWithKey (\k v -> do
-            (r, mergedEv) <- runSubWidget (mkElementResp (Some k) 0) (f k v)
-            liftIO $ modifyIORef' initialAgg
-              (Map.insert (Some k)
-                (R.fmapCheap (IntMap.singleton 0) (unsafeCoerce mergedEv
-                  :: R.Event (SpiderTimeline x) (IntMap.IntMap Any))))
-            pure r
-          ) m0
-        eventMap0 <- liftIO $ readIORef initialAgg
-        (patchEv, firePatch) <- liftIO $ do
-          rt <- newIORef Nothing
-          ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing))
-          let fire a = writeChan chan
-                [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-          pure (ev, fire)
-        triggerPropEv <- withEffToIO E.SeqForkUnlift
-          $ \runOuterInIO -> do
-            let te = SI.SpiderEvent $ SI.pushCheap
-                  (\(n, PatchDMapWithMove patch) -> do
-                      patchAgg <- liftIO $ newIORef Map.empty
-                      newInner <- liftIO $ DMap.traverseWithKey
-                        (\k node -> do
-                            newFrom <- case _nodeInfo_from node of
-                              From_Insert v -> do
-                                (r, mergedEv) <- runOuterInIO
-                                  (runSubWidget (mkElementResp (Some k) n) (f k v))
-                                modifyIORef' patchAgg
-                                  (Map.insert (Some k)
-                                    (PatchMapWithMove.NodeInfo
-                                      { PatchMapWithMove._nodeInfo_from = PatchMapWithMove.From_Insert
-                                          (R.fmapCheap (IntMap.singleton n)
-                                            (unsafeCoerce mergedEv
-                                              :: R.Event (SpiderTimeline x) (IntMap.IntMap Any)))
-                                      , PatchMapWithMove._nodeInfo_to = Nothing
-                                      }))
-                                pure (From_Insert r)
-                              From_Delete -> do
-                                modifyIORef' patchAgg
-                                  (Map.insert (Some k)
-                                    (PatchMapWithMove.NodeInfo
-                                      { PatchMapWithMove._nodeInfo_from = PatchMapWithMove.From_Delete
-                                      , PatchMapWithMove._nodeInfo_to = Nothing
-                                      }))
-                                pure From_Delete
-                              From_Move src -> do
-                                modifyIORef' patchAgg
-                                  (Map.insert (Some k)
-                                    (PatchMapWithMove.NodeInfo
-                                      { PatchMapWithMove._nodeInfo_from = PatchMapWithMove.From_Move (Some src)
-                                      , PatchMapWithMove._nodeInfo_to = Nothing
-                                      }))
-                                pure (From_Move src)
-                            pure NodeInfo
-                              { _nodeInfo_from = newFrom
-                              , _nodeInfo_to   = _nodeInfo_to node
-                              })
-                        patch
-                      patchEvents <- liftIO $ readIORef patchAgg
-                      liftIO $ firePatch
-                        ( PatchDMapWithMove newInner
-                        , PatchMapWithMove.unsafePatchMapWithMove patchEvents
-                        )
-                      pure (Just ()))
-                  (SI.unSpiderEvent numberedPev)
-            pure te
-        _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-        let dmapPatchEv = R.fmapCheap fst patchEv
-            eventPatchMapWithMove :: R.Event (SpiderTimeline x) (PatchMapWithMove (Some k) (R.Event (SpiderTimeline x) (IntMap.IntMap (IntMap.IntMap Any))))
-            eventPatchMapWithMove = R.fmapCheap snd patchEv
-        requestsIncr <- holdIncrementalE eventMap0 eventPatchMapWithMove
-        let mergedMapEv = R.mergeMapIncrementalWithMove requestsIncr
-            promptRequests = R.coincidence $ R.fmapCheap
-              (\patch ->
-                let patchMap    = unPatchMapWithMove patch
-                    insertsMap  = Map.mapMaybe
-                      (\ni -> case PatchMapWithMove._nodeInfo_from ni of
-                        PatchMapWithMove.From_Insert e -> Just e
-                        _                              -> Nothing)
-                      patchMap
-                in R.mergeMap insertsMap)
-              eventPatchMapWithMove
-            combinedMapEv :: R.Event (SpiderTimeline x) (Map.Map (Some k) (IntMap.IntMap (IntMap.IntMap Any)))
-            combinedMapEv = R.mergeWith
-              (Map.unionWith (IntMap.unionWith IntMap.union))
-              [promptRequests, mergedMapEv]
-    pure (m0', dmapPatchEv)
-
--- | Schedule replacement cohorts: pushCheap on the numbered replacement
--- event, run each cohort's sub-widget with its response slice, fire a
--- raw trigger with the (n, (result, aggN)) tuple on the shared chan.
--- mainLoop drains and fires the trigger in a fresh frame, so the returned
--- Event fires one frame after the na' fire (matching upstream
--- performEvent semantics).
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableE
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT scheduleReplacementCohorts
-scheduleReplacementCohorts
-  :: forall x sub es bVal.
-     ( HasSpiderTimeline x
-     , IOE :> es
-     , SubscribeEvent (SpiderTimeline x) :> es
-     )
-  => Chan [DSum (EventTriggerRef (SpiderTimeline x)) TriggerInvocation]
-  -> (forall y.
-         R.Event (SpiderTimeline x) (RequesterData Identity)
-      -> Eff sub y
-      -> Eff es (y, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x))))
-  -> R.EventSelectorInt (SpiderTimeline x) (RequesterData Identity)
-  -> R.Event (SpiderTimeline x) (Int, Eff sub bVal)
-  -> Eff es
-       (R.Event (SpiderTimeline x)
-         (Int, (bVal, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x)))))
-scheduleReplacementCohorts chan runSubWidget responses' na' = do
-  -- Raw trigger for output event
-  (v', fireV) <- liftIO $ do
-    rt <- newIORef Nothing
-    ev <- SI.SpiderEvent <$> newEventWithTriggerIO (\t -> do
-      writeIORef rt (Just t)
-      pure (writeIORef rt Nothing))
-    let fire a = writeChan chan
-          [EventTriggerRef rt :=> TriggerInvocation a (pure ())]
-    pure (ev, fire)
-  -- pushCheap: at each replacement fire, run runSubWidget with slice n,
-  -- then fire v' with (n, (result, aggN)).
-  -- SeqForkUnlift: see runWithReplaceDirect for rationale.
-  triggerPropEv <- withEffToIO E.SeqForkUnlift
-    $ \runOuterInIO -> do
-      let te = SI.SpiderEvent $ SI.pushCheap
-            (\(n, act) -> do
-                let cohortResp = R.selectInt responses' n
-                (r, aggN) <- liftIO $ runOuterInIO (runSubWidget cohortResp act)
-                liftIO $ fireV (n, (r, aggN))
-                pure (Just ()))
-            (SI.unSpiderEvent na')
-      pure te
-  _ <- subscribeEventE @(SpiderTimeline x) triggerPropEv
-  pure v'
-
---------------------------------------------------------------------------------
--- 'runAdjustableEStandalone' — NEW. AdjustableE handler that does NOT
--- require an outer 'Requester :> es'. Uses an INTERNAL Requester scope
--- installed via 'reinterpret' + 'runRequester' — makes the outer row
--- Requester-free at this layer.
---
--- Design intent (option (b) — merge sub-widget's Requester + PerformEvent
--- into ONE Requester per cohort):
---   * The outer widget row does NOT carry an explicit 'Requester' effect —
---     'runAdjustableEStandalone' installs one internally for its own
---     cohort-request bundling (invisible to caller).
---   * The sub-widget's 'GuestEff' row (arg to sub-handler 'runSubWidget')
---     carries its own explicit 'Requester' AND 'PerformEvent'. The
---     'runSubWidget' discharge chain uses 'interpretPerformEventAsRequester'
---     so 'PerformEvent' routes through the ambient (sub-scoped) Requester
---     — ONE Requester per cohort at widget-code level.
---   * The internal Requester of 'runAdjustableEStandalone' is separate
---     plumbing for cohort aggregation (invisible), NOT the same instance
---     as the sub's Requester.
---
--- Implementation:
---   * 'runRequester responseEv' installs internal Requester and produces
---     bundled aggActions.
---   * 'raiseUnder' lifts the input 'Eff (AdjustableE sub t : es) a' into
---     the augmented row 'Eff (AdjustableE sub t : Requester : es) a' so
---     'runAdjustableE' (which requires Requester in its outer) can peel
---     the AdjustableE and dispatch handlers that use 'requestingBundledE'
---     on the internal Requester.
---   * The outer runSubWidget (caller-supplied) works in outer 'es'; we
---     'raise' its result to 'Requester : es' to match 'runAdjustableE''s
---     expected shape.
---
--- Returned aggActions is what the composer's mainLoop drains via
--- 'fireAndDrain'. Responses come back through the passed-in 'responseEv'.
---
--- Preserves 'runAdjustableE' above verbatim per no-deletion rule.
---------------------------------------------------------------------------------
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT scheduleReplacementCohorts
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableEStandalone
-runAdjustableEStandalone
-  :: forall x sub es a.
-     ( HasSpiderTimeline x
-     , R.Reflex (SpiderTimeline x)
-     , IOE :> es
-     , Hold (SpiderTimeline x) :> es
-     , Sample (SpiderTimeline x) :> es
-     , SubscribeEvent (SpiderTimeline x) :> es
-     )
-  => Chan [DSum (EventTriggerRef (SpiderTimeline x)) TriggerInvocation]
-     -- ^ chan for internal drain triggers
-  -> R.Event (SpiderTimeline x) (RequesterData Identity)
-     -- ^ response event fed by the composer's mainLoop; responses to
-     --   requesting/performEvent calls come back here
-  -> (forall y.
-         R.Event (SpiderTimeline x) (RequesterData Identity)
-      -> Eff sub y
-      -> Eff es (y, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x))))
-     -- ^ caller-supplied sub-widget runner. Runs in outer 'es' (no
-     --   Requester at outer). Discharges sub-widget effects per cohort.
-  -> Eff (AdjustableE sub (SpiderTimeline x) : es) a
-  -> Eff es (a, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x)))
-     -- ^ (widget result, aggregated per-widget requests). Composer plumbs
-     --   aggActions into 'fireAndDrain'.
-runAdjustableEStandalone chan responseEv runSubWidget action =
-  runRequester @(SpiderTimeline x) @(SI.SpiderHostFrame x) @Identity responseEv $
-    runAdjustableE @x @sub chan runSubWidgetLifted
-      -- 'inject' lifts the input row 'AdjustableE sub t : es' into
-      -- 'AdjustableE sub t : Requester : es' (superset). Subset instance
-      -- is satisfied because each effect in the sub-row is a member of
-      -- the augmented row.
-      (inject action)
-  where
-    -- Lift outer runSubWidget from 'Eff es (...)' to 'Eff (Requester : es) (...)'
-    -- so it matches the augmented row expected by the inner runAdjustableE.
-    runSubWidgetLifted
-      :: forall y. R.Event (SpiderTimeline x) (RequesterData Identity)
-      -> Eff sub y
-      -> Eff (Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity ': es)
-             (y, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x)))
-    runSubWidgetLifted resp act = raise (runSubWidget resp act)
-
---------------------------------------------------------------------------------
--- 'runAdjustableEPerformEventBased' — LEGACY, preserved per no-deletion rule.
---
--- The original 'runAdjustableE' from earlier this session. Requires
--- 'PerformEvent x :> es' because it uses 'performEventE @x' for drain
--- scheduling. Superseded by the chan-based 'runAdjustableE' above (which
--- is 'PerformEvent'-free, enabling widget-scoped 'PerformEvent' in the
--- sub row).
---
--- Kept live and callable for backward compat. Delete once no callers
--- reference it.
---------------------------------------------------------------------------------
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableEStandalone
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableEPerformEventBased
-runAdjustableEPerformEventBased
-  :: forall x sub es a.
-     ( HasSpiderTimeline x
-     , IOE :> es
-     , PerformEvent x :> es
-     )
-  => (forall y. Eff sub y -> Eff es y)
-  -> Eff (AdjustableE sub (SpiderTimeline x) : es) a
-  -> Eff es a
-runAdjustableEPerformEventBased runSubWidget = interpret $ \_env -> \case
-  RunWithReplace' a0 a' -> do
-    -- Initial: runSubWidget stays in Eff es land, direct call
-    x0 <- runSubWidget a0
-    -- Replacements: pushCheap callback runs in EventM x / IO, need to bridge.
-    -- Use 'withEffToIO' with Persistent unlifting to get an IO-runner for the
-    -- OUTER Eff es (not localEs). Compose with runSubWidget: Eff sub y -> IO y.
-    (triggerEv, ref) <- withEffToIO (E.ConcUnlift E.Persistent E.Unlimited) $ \runOuterInIO -> do
-      let subInIO :: forall y. Eff sub y -> IO y
-          subInIO = runOuterInIO . runSubWidget
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\newAction -> do
-                val <- liftIO (subInIO newAction)
-                liftIO (writeIORef ref (Just val))
-                pure (Just ()))
-            (SI.unSpiderEvent a')
-      pure (triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef ref
-          writeIORef ref Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustableE/RunWithReplace': result IORef empty at drain (impossible)")
-      triggerEv
-    pure (x0, outEv)
-
-  TraverseIntMapWithKeyWithAdjust' f m0 pev -> do
-    m0' <- IntMap.traverseWithKey (\k v -> runSubWidget (f k v)) m0
-    (triggerEv, ref) <- withEffToIO (E.ConcUnlift E.Persistent E.Unlimited) $ \runOuterInIO -> do
-      let subInIO :: forall y. Eff sub y -> IO y
-          subInIO = runOuterInIO . runSubWidget
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchIntMap patch) -> do
-                newInner <- liftIO $ IntMap.traverseWithKey
-                  (\k mv -> traverse (subInIO . f k) mv)
-                  patch
-                liftIO (writeIORef ref (Just (PatchIntMap newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef ref
-          writeIORef ref Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustableE/TraverseIntMapWithKeyWithAdjust': result IORef empty at drain (impossible)")
-      triggerEv
-    pure (m0', outEv)
-
-  TraverseDMapWithKeyWithAdjust' f m0 pev -> do
-    m0' <- DMap.traverseWithKey (\k v -> runSubWidget (f k v)) m0
-    (triggerEv, ref) <- withEffToIO (E.ConcUnlift E.Persistent E.Unlimited) $ \runOuterInIO -> do
-      let subInIO :: forall y. Eff sub y -> IO y
-          subInIO = runOuterInIO . runSubWidget
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchDMap patch) -> do
-                newInner <- liftIO $ DMap.traverseWithKey
-                  (\k (ComposeMaybe mv) ->
-                      ComposeMaybe <$> traverse (subInIO . f k) mv)
-                  patch
-                liftIO (writeIORef ref (Just (PatchDMap newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef ref
-          writeIORef ref Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustableE/TraverseDMapWithKeyWithAdjust': result IORef empty at drain (impossible)")
-      triggerEv
-    pure (m0', outEv)
-
-  TraverseDMapWithKeyWithAdjustWithMove' f m0 pev -> do
-    m0' <- DMap.traverseWithKey (\k v -> runSubWidget (f k v)) m0
-    (triggerEv, ref) <- withEffToIO (E.ConcUnlift E.Persistent E.Unlimited) $ \runOuterInIO -> do
-      let subInIO :: forall y. Eff sub y -> IO y
-          subInIO = runOuterInIO . runSubWidget
-      ref <- newIORef Nothing
-      let triggerEv = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchDMapWithMove patch) -> do
-                newInner <- liftIO $ DMap.traverseWithKey
-                  (\k node -> do
-                      newFrom <- case _nodeInfo_from node of
-                        From_Insert v -> From_Insert <$> subInIO (f k v)
-                        From_Delete   -> pure From_Delete
-                        From_Move src -> pure (From_Move src)
-                      pure NodeInfo
-                        { _nodeInfo_from = newFrom
-                        , _nodeInfo_to   = _nodeInfo_to node
-                        })
-                  patch
-                liftIO (writeIORef ref (Just (PatchDMapWithMove newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (triggerEv, ref)
-    outEv <- performEventE @x $ R.fmapCheap
-      (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-          mval <- readIORef ref
-          writeIORef ref Nothing
-          case mval of
-            Just val -> pure val
-            Nothing  -> error "runAdjustableE/TraverseDMapWithKeyWithAdjustWithMove': result IORef empty at drain (impossible)")
-      triggerEv
-    pure (m0', outEv)
-
---------------------------------------------------------------------------------
--- 'runAdjustableEViaOld' — DISABLED, WRONG DESIGN.
---
--- I first attempted a bridge that translated 'AdjustableE' operations
--- into old 'Adjustable' operations and delegated to the existing fused
--- runner via the old-design send helpers. The user clarified this was
--- NOT the intended reuse: what they want is to REUSE THE INTERPOSE
--- MACHINERY (Requester + cohort + Multi2 tagging) inside
--- 'runPerformEventAndAdjustable' — i.e., extract the interpose body
--- and repoint it at the NEW 'AdjustableE' effect, so the cohort logic
--- lives once and is shared.
---
--- Kept commented (per "no deletions" rule) as a record of the wrong turn.
---
--- runAdjustableEViaOld
---   :: forall x sub es a.
---      ( HasSpiderTimeline x
---      , Adjustable (SpiderTimeline x) :> es
---      )
---   => (forall y. Eff sub y -> Eff es y)   -- sub-widget runner
---   -> Eff (AdjustableE sub (SpiderTimeline x) : es) a
---   -> Eff es a
--- runAdjustableEViaOld runSubWidget = interpret $ \_env -> \case
---   RunWithReplace' subA0 subA' ->
---     runWithReplaceE (runSubWidget subA0) (R.fmapCheap runSubWidget subA')
---   TraverseIntMapWithKeyWithAdjust' f m0 pev ->
---     traverseIntMapWithKeyWithAdjustE (\k v -> runSubWidget (f k v)) m0 pev
---   TraverseDMapWithKeyWithAdjust' f m0 pev ->
---     traverseDMapWithKeyWithAdjustE (\k v -> runSubWidget (f k v)) m0 pev
---   TraverseDMapWithKeyWithAdjustWithMove' f m0 pev ->
---     traverseDMapWithKeyWithAdjustWithMoveE (\k v -> runSubWidget (f k v)) m0 pev
---------------------------------------------------------------------------------
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runAdjustableEPerformEventBased
 runTimeline :: forall t es a. Eff (Timeline t : es) a -> Eff es a
 runTimeline = interpret $ \_ -> \case {}
 
@@ -3951,18 +2436,8 @@ instance (TriggerEvent t :> es, RT.TriggerEvent t (Eff es))
   newTriggerEventWithOnComplete         = newTriggerEventWithOnCompleteE
   newEventWithLazyTriggerWithOnComplete = newEventWithLazyTriggerWithOnCompleteE
 
--- POLYMORPHIC MTL Adjustable instance. Routes to OLD 'Adjustable' effect
--- via 'runWithReplaceE'. This is the ONLY MTL Adjustable instance for
--- 'Eff es' — a Spider-specific companion instance was attempted (would
--- have routed to 'runWithReplaceDirect' family below when t ~ SpiderTimeline
--- x) but failed due to fundep collision: 'Adjustable t m | m -> t' requires
--- a UNIQUE 't' per 'm', and two instances at 'Eff es' — one polymorphic in
--- 't', one specific to 'SpiderTimeline x' — violate the fundep even with
--- OVERLAPPING pragmas.
---
--- Consumers who want NEW direct-dispatch routing can call 'runWithReplaceDirect'
--- / 'traverseIntMapWithKeyWithAdjustDirect' etc. directly (bypassing the
--- MTL class). The direct helpers are exported.
+-- MTL adjustment dispatches through the Adjustable effect. WidgetEffE
+-- provides a separate instance for the direct Spider helpers.
 instance (Adjustable t :> es, RA.Adjustable t (Eff es), R.Reflex t)
       => RA.Adjustable t (Eff es) where
   runWithReplace                        = runWithReplaceE
@@ -3971,373 +2446,6 @@ instance (Adjustable t :> es, RA.Adjustable t (Eff es), R.Reflex t)
   traverseDMapWithKeyWithAdjustWithMove = traverseDMapWithKeyWithAdjustWithMoveE
 
 --------------------------------------------------------------------------------
--- Direct 'Adjustable' method implementations. Instance body above dispatches
--- to these. They mirror the upstream MTL 'PerformEventT' Adjustable instance
--- pattern: implement 'runWithReplace' etc. directly using ambient primitives,
--- no dispatch to a separate 'Adjustable'/'AdjustableE' effect required.
---
--- SHARED-COHORT semantics: widget's 'performEvent'/'requesting'-style calls
--- go to the AMBIENT Requester scope (single tag namespace across all
--- cohorts). Correct — tags are globally unique, responses route by tag.
--- Memory-wise: old cohorts' tags stay allocated in the shared state
--- (minor leak in long-running apps; not a concern for tests).
---
--- Contrast with 'runAdjustableE' family (the effect-based interpreters):
--- those support per-cohort fresh Requester scope via runner re-invocation,
--- matching upstream 'runWithReplaceRequesterTWith' semantics for full
--- cohort isolation. Those are for consumers who explicitly want cohort
--- isolation. The MTL class instance here uses the simpler shared-scope
--- semantics for uniform MTL routing.
---
--- Legacy 'runWithReplaceE' etc. send helpers still exist and route to
--- OLD 'Adjustable' effect for consumers who explicitly want that path.
---------------------------------------------------------------------------------
-
--- Direct Spider implementation of runWithReplace — bypasses both the
--- OLD 'runPerformEventAndAdjustable' fused runner AND the intermediate
--- 'performEventE' + resultRef drain pattern.
---
--- Key insight (task #245 investigation): 'performEventE' in the port
--- routes through the Requester 'cohortPtr' machinery (see
--- 'performEventHandler' at HeadlessEffectful.hs:1344-1363). The OLD
--- fused RunWithReplace handler works because it FIRST installs the
--- correct cohort scope via 'runInCohortIO cohortPtr cohortNSel' BEFORE
--- calling 'performEventE @x'. A drain via 'performEventE' outside that
--- fused scope allocates the response tag in the WRONG cohortPtr, so
--- the response event never fires with the expected timing for nested
--- runWithReplace + per-child postBuild patterns (the "can be nested in
--- postBuild widget" test regression).
---
--- Fix: emit the response event DIRECTLY from 'pushCheap' — the
--- callback returns 'Just val' so the returned event fires with 'val'
--- IN THE SAME Spider frame as 'a''. No trigger IORef, no drain event,
--- no 'performEventE' — hence no Requester-scope dependency.
---
--- Trade-off: with this shape, replacements fire in the SAME frame as
--- their trigger. The OLD handler's next-frame drain semantics were an
--- artifact of the fused runner's shape — for a direct helper, same-
--- frame is more upstream-faithful (matches
--- 'Reflex.Dom.Builder.Immediate.runWithReplace' → 'lift $ runWithReplace'
--- → PerformEventT / Adjustable's Spider-native primitives).
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runWithReplaceDirect
-runWithReplaceDirect
-  :: forall x es a b.
-     ( HasSpiderTimeline x
-     , IOE :> es
-     )
-  => Eff es a
-  -> R.Event (SpiderTimeline x) (Eff es b)
-  -> Eff es (a, R.Event (SpiderTimeline x) b)
-runWithReplaceDirect a0 a' =
-  -- SeqForkUnlift: pushCheap callback fires asynchronously (much later,
-  -- when events fire in Spider frames). SeqUnlift's captured env is
-  -- torn down when withEffToIO returns, causing "version (N) /=
-  -- storageVersion (0)" when the pushCheap callback tries to use it.
-  -- SeqForkUnlift forks a fresh thread with a fresh env replica per
-  -- call — works across async boundaries.
-  withEffToIO E.SeqForkUnlift $ \runOuterInIO -> do
-    x0 <- runOuterInIO a0
-    let outEv = SI.SpiderEvent $ SI.pushCheap
-          (\newAction -> do
-              val <- liftIO (runOuterInIO newAction)
-              pure (Just val))
-          (SI.unSpiderEvent a')
-    pure (x0, outEv)
-
--- See 'runWithReplaceDirect' for drain-pattern rationale.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runWithReplaceDirect
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT traverseIntMapWithKeyWithAdjustDirect
-traverseIntMapWithKeyWithAdjustDirect
-  :: forall x es v v'.
-     ( HasSpiderTimeline x
-     , IOE :> es
-     , PerformEvent x :> es
-     )
-  => (IntMap.Key -> v -> Eff es v')
-  -> IntMap.IntMap v
-  -> R.Event (SpiderTimeline x) (R.PatchIntMap v)
-  -> Eff es (IntMap.IntMap v', R.Event (SpiderTimeline x) (R.PatchIntMap v'))
-traverseIntMapWithKeyWithAdjustDirect f m0 pev = do
-  (m0', triggerEv, resultRef) <- withEffToIO E.SeqForkUnlift
-    $ \runOuterInIO -> do
-      m0' <- runOuterInIO (IntMap.traverseWithKey f m0)
-      ref <- liftIO $ newIORef Nothing
-      let te = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchIntMap patch) -> do
-                newInner <- liftIO $ IntMap.traverseWithKey
-                  (\_k mv -> traverse (\v -> runOuterInIO (f _k v)) mv)
-                  patch
-                liftIO (writeIORef ref (Just (PatchIntMap newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (m0', te, ref)
-  outEv <- performEventE @x $ R.fmapCheap
-    (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-        mval <- readIORef resultRef
-        writeIORef resultRef Nothing
-        case mval of
-          Just val -> pure val
-          Nothing  -> error
-            "traverseIntMapWithKeyWithAdjustDirect: result IORef empty at drain (impossible)")
-    triggerEv
-  pure (m0', outEv)
-
--- See 'runWithReplaceDirect' for drain-pattern rationale.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT traverseIntMapWithKeyWithAdjustDirect
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjustDirect
-traverseDMapWithKeyWithAdjustDirect
-  :: forall x es k v v'.
-     ( HasSpiderTimeline x
-     , IOE :> es
-     , PerformEvent x :> es
-     , GCompare k
-     )
-  => (forall a. k a -> v a -> Eff es (v' a))
-  -> DMap.DMap k v
-  -> R.Event (SpiderTimeline x) (R.PatchDMap k v)
-  -> Eff es (DMap.DMap k v', R.Event (SpiderTimeline x) (R.PatchDMap k v'))
-traverseDMapWithKeyWithAdjustDirect f m0 pev = do
-  (m0', triggerEv, resultRef) <- withEffToIO E.SeqForkUnlift
-    $ \runOuterInIO -> do
-      m0' <- runOuterInIO (DMap.traverseWithKey f m0)
-      ref <- liftIO $ newIORef Nothing
-      let te = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchDMap patch) -> do
-                newInner <- liftIO $ DMap.traverseWithKey
-                  (\k (ComposeMaybe mv) ->
-                      ComposeMaybe <$> traverse (\v -> runOuterInIO (f k v)) mv)
-                  patch
-                liftIO (writeIORef ref (Just (PatchDMap newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (m0', te, ref)
-  outEv <- performEventE @x $ R.fmapCheap
-    (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-        mval <- readIORef resultRef
-        writeIORef resultRef Nothing
-        case mval of
-          Just val -> pure val
-          Nothing  -> error
-            "traverseDMapWithKeyWithAdjustDirect: result IORef empty at drain (impossible)")
-    triggerEv
-  pure (m0', outEv)
-
--- See 'runWithReplaceDirect' for drain-pattern rationale.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjustDirect
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjustWithMoveDirect
-traverseDMapWithKeyWithAdjustWithMoveDirect
-  :: forall x es k v v'.
-     ( HasSpiderTimeline x
-     , IOE :> es
-     , PerformEvent x :> es
-     , GCompare k
-     )
-  => (forall a. k a -> v a -> Eff es (v' a))
-  -> DMap.DMap k v
-  -> R.Event (SpiderTimeline x) (R.PatchDMapWithMove k v)
-  -> Eff es (DMap.DMap k v', R.Event (SpiderTimeline x) (R.PatchDMapWithMove k v'))
-traverseDMapWithKeyWithAdjustWithMoveDirect f m0 pev = do
-  (m0', triggerEv, resultRef) <- withEffToIO E.SeqForkUnlift
-    $ \runOuterInIO -> do
-      m0' <- runOuterInIO (DMap.traverseWithKey f m0)
-      ref <- liftIO $ newIORef Nothing
-      let te = SI.SpiderEvent $ SI.pushCheap
-            (\(PatchDMapWithMove patch) -> do
-                newInner <- liftIO $ DMap.traverseWithKey
-                  (\k node -> do
-                      newFrom <- case _nodeInfo_from node of
-                        From_Insert v -> From_Insert <$> runOuterInIO (f k v)
-                        From_Delete   -> pure From_Delete
-                        From_Move src -> pure (From_Move src)
-                      pure NodeInfo
-                        { _nodeInfo_from = newFrom
-                        , _nodeInfo_to   = _nodeInfo_to node
-                        })
-                  patch
-                liftIO (writeIORef ref (Just (PatchDMapWithMove newInner)))
-                pure (Just ()))
-            (SI.unSpiderEvent pev)
-      pure (m0', te, ref)
-  outEv <- performEventE @x $ R.fmapCheap
-    (\() -> SI.SpiderHostFrame $ SI.EventM $ do
-        mval <- readIORef resultRef
-        writeIORef resultRef Nothing
-        case mval of
-          Just val -> pure val
-          Nothing  -> error
-            "traverseDMapWithKeyWithAdjustWithMoveDirect: result IORef empty at drain (impossible)")
-    triggerEv
-  pure (m0', outEv)
-
--- NOTE: The following ATTEMPTED instance is commented out because GHC
--- rejects it as a duplicate of the instance above (same head
--- 'RA.Adjustable t (Eff es)'). OVERLAPPING/OVERLAPPABLE pragmas don't
--- resolve this — GHC's duplicate-instance check operates on the HEAD
--- shape, not the constraint context. Preserving here per no-deletions
--- rule as design record.
---
--- To route MTL Adjustable class calls to the NEW 'AdjustableE' effect,
--- the CLEANEST path is one of:
---
---   (a) Change the EXISTING instance body above to dispatch to new
---       'AdjustableE' via 'runWithReplace @es @t' (self-recursive constraint
---       'AdjustableE es t :> es' — requires row to include AdjustableE at
---       itself, which needs a TypeFamily or newtype workaround to satisfy
---       syntactically). Breaks existing consumers using OLD Adjustable rows.
---
---   (b) Add a NEWTYPE wrapper 'WidgetEffE es a = WidgetEffE (Eff es a)'
---       with Adjustable instance sending to new AdjustableE. Consumers
---       opt in by wrapping in 'WidgetEffE'. Doesn't collide with existing
---       instance.
---
---   (c) Migrate consumers/tests directly to 'send @(AdjustableE ...)' or
---       to the top-level 'runWithReplace' send helper (non-class).
---       Doesn't need MTL class routing at all.
---
--- instance ( AdjustableE es t :> es
---          , RA.Adjustable t (Eff es), R.Reflex t)
---       => RA.Adjustable t (Eff es) where
---   runWithReplace                        = runWithReplace @es @t
---   traverseIntMapWithKeyWithAdjust       = traverseIntMapWithKeyWithAdjust @es @t
---   traverseDMapWithKeyWithAdjust         = traverseDMapWithKeyWithAdjust @es @t
---   traverseDMapWithKeyWithAdjustWithMove = traverseDMapWithKeyWithAdjustWithMove @es @t
-
---------------------------------------------------------------------------------
--- Option (B): Newtype wrapper 'WidgetEffE' + MTL Adjustable instance routing
--- to the NEW 'AdjustableE' effect.
---
--- Consumers who want to run MTL 'Adjustable'-polymorphic code (widgetHold,
--- dyn, etc.) through the NEW machinery wrap their Eff computation in
--- 'WidgetEffE'. The instance below routes MTL class methods through the
--- new 'AdjustableE' send helpers ('runWithReplace @es @t' etc.), so any
--- MTL widget code polymorphic over 'Adjustable t m' will use the NEW
--- interpreter when instantiated at @m = WidgetEffE es@.
---
--- The recursive constraint 'AdjustableE es t :> es' means the row 'es'
--- must include 'AdjustableE es t' (self-referential — sub row = outer row,
--- enabling nested 'runWithReplace' with the same row at each level).
--- Consumers need to define such a row via a recursive type family or
--- similar workaround to satisfy the constraint syntactically. This is a
--- follow-on task; the instance itself is complete.
---
--- Coexists with the plain 'Eff es' instance above (which routes to OLD
--- 'Adjustable' effect). No overlap because the newtype changes the
--- instance HEAD ('WidgetEffE es' vs 'Eff es').
---------------------------------------------------------------------------------
-
--- | Newtype wrapper enabling MTL Adjustable class routing through the
--- NEW 'AdjustableE' effect. See docstring above for context.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT traverseDMapWithKeyWithAdjustWithMoveDirect
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT WidgetEffE
-newtype WidgetEffE es a = WidgetEffE { unWidgetEffE :: Eff es a }
-  deriving newtype (Functor, Applicative, Monad, MonadFix)
-
--- Standalone deriving for 'MonadIO' — needs 'IOE :> es' constraint that
--- can't be expressed in the plain 'deriving' clause above.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT WidgetEffE
--- OLD-ADJUSTABLE-COMMENTED-OUT: deriving newtype instance (IOE :> es) => MonadIO (WidgetEffE es)
-
--- | Recursive-row type family: defines a row 'HeadlessRowER x' that
--- includes itself in the 'AdjustableE' sub parameter. This is what makes
--- 'AdjustableE (HeadlessRowER x) t :> HeadlessRowER x' satisfiable at the
--- MTL Adjustable class instance's constraint site.
---
--- GHC treats closed type families as reducible on demand; if we avoid
--- forcing full expansion, constraint solving unifies structurally without
--- diverging. Consumers use 'HeadlessRowER x' in signatures; specific
--- effect-order-preserving type-family reduction happens only when GHC
--- needs to peel one level at a time (e.g. during 'runAdjustableE'
--- application).
---
--- Effect order matches 'HeadlessRowE' shape: AdjustableE (self) at head,
--- then widget-scoped effects, then base row.
--- NOTE: recursive type family 'HeadlessRowER' + composer 'runHeadlessAppER'
--- were attempted here but reverted. Preserved as design record per no-
--- deletions rule.
---
--- The idea: define 'HeadlessRowER x' as a self-referential row type
--- family so 'AdjustableE (HeadlessRowER x) t :> HeadlessRowER x' would
--- be satisfiable, enabling MTL 'Adjustable'-polymorphic widget code to
--- run under 'WidgetEffE (HeadlessRowER x)' with arbitrary-depth
--- 'runWithReplace' nesting.
---
--- Result: GHC's type family reducer either hits '-fcontext-reduction'
--- depth limit (default 201) OR runs unbounded and blows the RTS stack.
--- The syntactic recursion in 'HeadlessRowER x = AdjustableE (HeadlessRowER x) t : ...'
--- causes GHC to try full expansion of the row when constraint-solving
--- 'AdjustableE (HeadlessRowER x) t :> HeadlessRowER x' — but full
--- expansion is infinite. '-freduction-depth=0' doesn't help because
--- GHC's tactic is depth-first eager reduction, not lazy-until-needed.
---
--- Workable alternatives (any of these would work; picking is a design call):
---
---   1. DEPTH-LIMITED: parameterize the row on a Nat depth 'n', with base
---      case at 0 (no AdjustableE). Reduces N times, stops. Downside:
---      MTL Adjustable instance's constraint 'AdjustableE es t :> es'
---      doesn't unify (sub at depth n-1 differs from outer at depth n).
---      Would need class methods keyed by depth OR a different constraint
---      shape.
---
---   2. Type-level fixed point via a DATA type (not a synonym or family).
---      GHC treats data types as opaque — no reduction. But Effectful
---      rows are '[Effect]', not arbitrary types. Would need a wrapper
---      newtype at the effect level.
---
---   3. REDESIGN 'AdjustableE' to not need explicit 'sub' row — use MTL-
---      style opaque 'm' parameter. This is the OLD Adjustable design,
---      which has rank-2 skolem issues we designed AdjustableE to avoid.
---
---   4. Rank-N GADT constructor with 'forall row. AdjustableE :> row => Eff row a'
---      for the child. Sub-widget polymorphic in its row. Requires
---      RankNTypes in GADT constructors; may not compose cleanly with
---      Effectful's dispatch.
---
--- For now, 'WidgetEffE' + MTL 'Adjustable' instance are in place but
--- the instance's 'AdjustableE es t :> es' constraint is unsatisfiable
--- by any concrete row without one of the above workarounds. Consumers
--- who want MTL-style routing through the new machinery need to pick
--- an approach.
---
--- type family HeadlessRowER (x :: Type) :: [Effect] where
---   HeadlessRowER x =
---     AdjustableE (HeadlessRowER x) (SpiderTimeline x)
---     ': PerformEvent x
---     ': Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity
---     ': PostBuild (SpiderTimeline x)
---     ': TriggerEvent (SpiderTimeline x)
---     ': BaseEffectfulHostRow x
---
--- runHeadlessAppER :: ... -> IO a
--- runHeadlessAppER guest = ... (body attempted; hit reduction-depth error)
-
--- Dispatches to direct helpers ('runWithReplaceDirect' family) — NOT to a
--- separate AdjustableE effect. Mirrors upstream MTL PerformEventT-style
--- instance pattern. Since 'WidgetEffE es' is a DIFFERENT monad than
--- 'Eff es' (newtype), no fundep collision with the polymorphic
--- 'Adjustable t (Eff es)' instance above — GHC treats them as unrelated.
--- Consumers who want new-dispatch MTL routing wrap their widget in
--- 'WidgetEffE'; polymorphic 'Adjustable' widget code instantiated at
--- 'WidgetEffE es' gets the direct-implementation machinery.
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT: instance RA.Adjustable (WidgetEffE es)
-instance ( HasSpiderTimeline x
-         , IOE :> es
-         , PerformEvent x :> es
-         , R.Reflex (SpiderTimeline x)
-         , RA.Adjustable (SpiderTimeline x) (WidgetEffE es)
-         )
-      => RA.Adjustable (SpiderTimeline x) (WidgetEffE es) where
-  runWithReplace (WidgetEffE a0) a' = WidgetEffE $
-    runWithReplaceDirect @x a0 (R.fmapCheap unWidgetEffE a')
-  traverseIntMapWithKeyWithAdjust f m0 pev = WidgetEffE $
-    traverseIntMapWithKeyWithAdjustDirect @x
-      (\k v -> unWidgetEffE (f k v)) m0 pev
-  traverseDMapWithKeyWithAdjust f m0 pev = WidgetEffE $
-    traverseDMapWithKeyWithAdjustDirect @x
-      (\k v -> unWidgetEffE (f k v)) m0 pev
-  traverseDMapWithKeyWithAdjustWithMove f m0 pev = WidgetEffE $
-    traverseDMapWithKeyWithAdjustWithMoveDirect @x
-      (\k v -> unWidgetEffE (f k v)) m0 pev
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT: instance RA.Adjustable (WidgetEffE es)
 
 -- Associated-type-having classes ('MonadReflexHost' with 'type ReadPhase m',
 -- 'PerformEvent' with 'type Performable m'): the recursive-context trick
@@ -4351,17 +2459,6 @@ type family ReadPhaseForRow (es :: [Effect]) :: Type -> Type where
   ReadPhaseForRow (HostFrame' (SpiderTimeline x) : _) = ReadPhase x
   ReadPhaseForRow (_ : es) = ReadPhaseForRow es
 
-{- BEGIN OLD-PERFORMEVENT-COMMENTED-OUT PerformableForRow (only consumer was the MTL PerformEvent
-   instance below, which is also commented per task #268 Fork C — "defer to caller"). No
-   replacement type family is provided: 'PerformEventEff subEs t'\'s callback type IS 'Eff subEs',
-   which any caller can name directly without a row-walking family.
-
--- | Extracts 'SpiderHostFrame x' from a row that contains @PerformEvent x@.
-type family PerformableForRow (es :: [Effect]) :: Type -> Type where
-  PerformableForRow (PerformEvent x : _) = SI.SpiderHostFrame x
-  PerformableForRow (_ : es) = PerformableForRow es
-
-END OLD-PERFORMEVENT-COMMENTED-OUT PerformableForRow -}
 
 -- | Extracts the callback monad @m@ from the first 'PerformEventM m t' effect
 -- in a row. Used by the MTL 'RHPE.PerformEvent' bridge below to satisfy the
@@ -4402,26 +2499,6 @@ instance
   fireEventsAndRead = fireEventsAndReadE @(SpiderTimeline x)
   runHostFrame      = runHostFrameE      @(SpiderTimeline x)
 
-{- BEGIN OLD-PERFORMEVENT-COMMENTED-OUT MTL RHPE.PerformEvent instance (OLD PerformEvent x version).
-Task #268 (2026-09-01): the OLD instance below routed through 'PerformEvent x' (now
-commented out). NEW instance further below routes through 'PerformEventEff' with
-'Performable (Eff es) = Eff '[IOE]' — pins callback carrier to a leaner Eff row
-that has MonadIO but not JSM (JSM would need a different pin per Fork C).
-Preserved verbatim.
-
--- Polymorphic PerformEvent — same idiom, closed type family for 'Performable'.
-instance
-  ( PerformEvent x :> es
-  , R.Reflex (SpiderTimeline x)
-  , HasSpiderTimeline x
-  , RHPE.PerformEvent (SpiderTimeline x) (Eff es)
-  , RHPE.Performable (Eff es) ~ SI.SpiderHostFrame x
-  ) => RHPE.PerformEvent (SpiderTimeline x) (Eff es) where
-  type Performable (Eff es) = PerformableForRow es
-  performEvent  = performEventE  @x
-  performEvent_ = performEventE_ @x
-
-END OLD-PERFORMEVENT-COMMENTED-OUT MTL RHPE.PerformEvent instance -}
 
 -- | MTL 'PerformEvent' bridge on 'Eff es'. Pins @Performable (Eff es) = HostFrame t@
 -- — upstream-verbatim shape. This is the correctness contract that ties widget-
@@ -4453,24 +2530,6 @@ instance
   performEvent  = performEventME  @(RH.HostFrame t) @t
   performEvent_ = performEventME_ @(RH.HostFrame t) @t
 
-{- BEGIN OLD-TASK272-COMMENTED-OUT MTL RHPE.PerformEvent bridge pinning Performable = SpiderHostFrame x.
-Task #272 (2026-08-31): pinned @Performable (Eff es) = SpiderHostFrame x@ via
-'PerformableForRow es' — upstream-verbatim @HostFrame t@ shape. Task #273
-reverted to '[IOE] bridge (see live instance above for rationale).
-Preserved verbatim.
-
-instance
-  ( PerformEventM (SI.SpiderHostFrame x) (SpiderTimeline x) :> es
-  , HasSpiderTimeline x
-  , R.Reflex (SpiderTimeline x)
-  , RHPE.PerformEvent (SpiderTimeline x) (Eff es)
-  , RHPE.Performable (Eff es) ~ SI.SpiderHostFrame x
-  ) => RHPE.PerformEvent (SpiderTimeline x) (Eff es) where
-  type Performable (Eff es) = PerformableForRow es
-  performEvent  = performEventME  @(SI.SpiderHostFrame x) @(SpiderTimeline x)
-  performEvent_ = performEventME_ @(SI.SpiderHostFrame x) @(SpiderTimeline x)
-
-END OLD-TASK272-COMMENTED-OUT MTL RHPE.PerformEvent bridge -}
 
 -- | Polymorphic 'Reflex.Requester.Class.Requester' instance for @Eff es@ —
 -- same recursive-context + closed-type-family idiom as the 'MonadReflexHost'
@@ -4535,55 +2594,6 @@ instance MonadAtomicRef (EffectfulHost x) where
 -- 'runAdjustable' — no MTL transformers.
 --------------------------------------------------------------------------------
 
-{- BEGIN OLD-PERFORMEVENT-COMMENTED-OUT MonadHeadlessAppE + MonadHeadlessApp + HeadlessRow.
-Task #268 (2026-09-01): OLD versions used 'PerformEvent x :> es' (constraint) and
-'PerformEvent x' (row entry). Migrated below to 'PerformEventEff subEs t' — the row is
-now polymorphic in the callback row 'subEs'; callers pick.
-Preserved verbatim as reference.
-
--- | Constraint bundle for native-Effectful headless FRP apps. All effects
--- are the row-based Effectful analogs of upstream's MTL class methods.
-type MonadHeadlessAppE (x :: Type) (es :: [Effect]) =
-  ( HasSpiderTimeline x
-  , IOE :> es
-  , Sample (SpiderTimeline x) :> es
-  , Hold (SpiderTimeline x) :> es
-  , NotReady (SpiderTimeline x) :> es
-  , SubscribeEvent (SpiderTimeline x) :> es
-  , ReadEvent (SpiderTimeline x) :> es
-  , CreateTrigger (SpiderTimeline x) :> es
-  , HostFrame' (SpiderTimeline x) :> es
-  , Adjustable (SpiderTimeline x) :> es
-  , Timeline (SpiderTimeline x) :> es
-  , PerformEvent x :> es
-  , PostBuild (SpiderTimeline x) :> es
-  , TriggerEvent (SpiderTimeline x) :> es
-  , R.Reflex (SpiderTimeline x)
-  , RH.ReflexHost (SpiderTimeline x)
-  )
-
--- Backwards-compat alias for the upstream-style bundle name.
-type MonadHeadlessApp x es = MonadHeadlessAppE x es
-
--- | The guest's fully-resolved row: base row plus Adjustable, PerformEvent,
--- Requester, PostBuild, TriggerEvent. Adjustable / PerformEvent / Requester
--- sit at the top in that exact order because 'runHeadlessApp' discharges all
--- three at once via the fused runner ('runPerformEventAndAdjustable'), which
--- owns the shared per-cohort selector chain needed to correctly route
--- response-carrying 'performEvent' calls made inside nested
--- 'runWithReplace' widgets (see 'runPerformEventAndAdjustable' docstring).
---
--- Guests that don't touch 'Requester' directly are unaffected — the
--- constraint is available in the row but not required to be used.
-type HeadlessRow (x :: Type) =
-  Adjustable (SpiderTimeline x)
-  ': PerformEvent x
-  ': Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity
-  ': PostBuild (SpiderTimeline x)
-  ': TriggerEvent (SpiderTimeline x)
-  ': BaseEffectfulHostRow x
-
-END OLD-PERFORMEVENT-COMMENTED-OUT MonadHeadlessAppE + MonadHeadlessApp + HeadlessRow -}
 
 -- | Constraint bundle for native-Effectful headless FRP apps.
 -- Timeline-polymorphic (@t@ — caller picks) and row-polymorphic on @subEs@
@@ -4633,7 +2643,7 @@ type HeadlessRow (subEs :: [Effect]) (t :: Type) =
   ': '[IOE]
 
 --------------------------------------------------------------------------------
--- Task #272 M-variants: HeadlessRowM + MonadHeadlessAppM.
+-- Host-frame callback API: HeadlessRowM + MonadHeadlessAppM.
 --
 -- Parallel to 'HeadlessRow' / 'MonadHeadlessAppE' but installs
 -- 'PerformEventM (RH.HostFrame t) t' in the row instead of
@@ -4685,83 +2695,6 @@ type HeadlessRowM (t :: Type) =
   ': Timeline t
   ': '[IOE]
 
-{- BEGIN OLD-PERFORMEVENT-COMMENTED-OUT runHeadlessApp (superseded by version below).
-Task #268 (2026-09-01): OLD body called the fused 'runPerformEventAndAdjustable'
-(which discharged Adjustable + PerformEvent + Requester together for shared-cohort
-response routing). That fused runner is commented out at lines 1186-1961 above.
-NEW body composes the three peels separately: 'runAdjustable . runPerformEventEff .
-runRequester' — user Fork D verdict was "easy swap". If tests reveal per-cohort
-routing regressions (Task #122 territory), reconstitute the fused runner atop
-'PerformEventEff'. Preserved verbatim below.
-
--- | Run a headless FRP network. Guest runs in an effect row with all
--- native effects available; no MTL transformers anywhere.
---
--- The main loop drains 'performEvent'-scheduled actions per frame,
--- mirroring upstream 'hostPerformEventT's fire-loop shape:
--- fire triggers → read shutdown + pending actions → run actions in
--- SpiderHostFrame → fire response trigger → iterate until stable.
-runHeadlessApp
-  :: forall a
-   . (forall x. HasSpiderTimeline x => Eff (HeadlessRow x) (R.Event (SpiderTimeline x) a))
-  -> IO a
-runHeadlessApp guest =
-  SI.withSpiderTimeline $ \(env :: SpiderTimelineEnv x) ->
-    runEffectfulHostFor @x
-      (do
-        -- Setup postBuild event trigger
-        (postBuild, pbTrigRef) <- liftIO $ do
-          rt <- newIORef Nothing
-          e <- newEventWithTriggerIO $ \t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing)
-          pure (SI.SpiderEvent e, rt)
-        -- Setup response event trigger for PerformEvent
-        (responseEv, respTrigRef) <- liftIO $ do
-          rt <- newIORef Nothing
-          e <- newEventWithTriggerIO $ \t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing)
-          pure (SI.SpiderEvent e, rt)
-        -- Setup TriggerEvent chan
-        events <- liftIO newChan
-        -- Discharge guest's layers. HeadlessRow order:
-        --   Adjustable : PerformEvent : Requester : PostBuild : TriggerEvent : Base
-        -- 'runPerformEventAndAdjustable' is the FUSED runner that discharges
-        -- Adjustable + PerformEvent + Requester together — required for
-        -- correct per-cohort response routing when nested 'runWithReplace'
-        -- widgets call response-carrying 'performEvent'. The prior
-        -- 'runPerformEvent . runAdjustable' composition split the three
-        -- into independent 'interpret' scopes, each with its own env
-        -- (cloned by 'SeqForkUnlift' at cohort boundaries) — losing the
-        -- shared cohort pointer that the per-cohort selector chain uses
-        -- to route responses back to their originating tag.
-        --
-        -- Same aggActions shape as before ('R.Event ... (RequesterData
-        -- (SI.SpiderHostFrame x))'); 'fireAndDrain' consumes it unchanged.
-        (result, aggActions) <- EffectfulHost $
-          runTriggerEvent events
-          . runPostBuild postBuild
-          . runPerformEventAndAdjustable @x responseEv
-          $ guest
-        -- Subscribe to result (shutdown) and aggActions (performEvent queue).
-        shutdownHandle <- EffectfulHost (subscribeEventE @(SpiderTimeline x) result)
-        actionsHandle  <- EffectfulHost (subscribeEventE @(SpiderTimeline x) aggActions)
-        -- Initial fire: postBuild trigger, drain any subsequent performEvent
-        -- actions until stable.
-        mPbTrig <- liftIO (readIORef pbTrigRef)
-        let initialFires = case mPbTrig of
-              Nothing -> []
-              Just pbTrig -> [pbTrig :=> Identity ()]
-        initialShutdown <- liftIO $
-          fireAndDrain @x initialFires actionsHandle shutdownHandle respTrigRef
-        case initialShutdown of
-          Just outVal -> pure outVal
-          Nothing -> mainLoopE @x events actionsHandle shutdownHandle respTrigRef
-      )
-      env
-
-END OLD-PERFORMEVENT-COMMENTED-OUT runHeadlessApp -}
 
 -- | Run a headless FRP network. Guest is timeline-polymorphic (@t@ —
 -- guest works over any 'ReflexHost' timeline); runtime instantiates
@@ -4801,8 +2734,7 @@ runHeadlessApp guest =
             pure (writeIORef rt Nothing)
           pure (SI.SpiderEvent e, rt)
         events <- liftIO newChan
-        -- Compositional discharge: separate peels, unlike the OLD fused
-        -- 'runPerformEventAndAdjustable'. Per Fork D verdict.
+        -- Interpret each capability separately around the shared event network.
         ((result, aggActions), _extAggReqs) <- EffectfulHost $
             runTriggerEvent events
           . runPostBuild postBuild
@@ -4824,7 +2756,7 @@ runHeadlessApp guest =
       )
       env
 
--- | Task #272 M-variant of 'runHeadlessApp'. Uses 'PerformEventM (HostFrame t) t'
+-- | Host-frame callback variant of 'runHeadlessApp'. Uses 'PerformEventM (HostFrame t) t'
 -- instead of 'PerformEventEff subEs t' — matches upstream 'PerformEventT t m'\'s
 -- @Performable = HostFrame t@ shape verbatim. Enables MTL 'RHPE.PerformEvent'
 -- consumers that require rich @Performable m@ (MonadHold, MonadSample, etc.)
@@ -5002,37 +2934,10 @@ mainLoopE events actionsHandle shutdownHandle respTrigRef = go
 --           tell behaviors + events
 --           pure (zipDynWith crop (incrementalToDynamic inc) responseDyn)
 --
--- TODO(2026-08-30): Adjustable-cross behavior.
---
--- The MTL @instance Adjustable t (QueryT t q m)@ intercepts
--- 'runWithReplace' and 'traverse*WithKeyWithAdjust' at the class level to
--- give sub-widget scopes their own query-collection state, then bubble
--- the sub-scope's aggregate query up to the parent as an 'AdditivePatch q'.
--- This is what makes @QueryT@ compose correctly with @runWithReplace@ —
--- deleted sub-widgets have their queries subtracted, added ones have
--- theirs added, all via 'AdditivePatch'.
---
--- The Effectful port does NOT yet cover this. Two viable paths:
---
---   (a) 'interpose' Adjustable inside 'runQueryE' so that when a child
---       widget calls 'runWithReplace' etc., the Query interpreter sees
---       it and installs a fresh per-cohort behavior collector — much like
---       'runAdjustableInRequesterT' installs per-cohort Requester state.
---       Complexity is similar; carrier is the same 'localUnliftIO' +
---       IORef swap pattern.
---
---   (b) Grow the fused runner ('runPerformEventAndAdjustable') into a
---       four-effect fused runner that owns Query state alongside the
---       Adjustable / PerformEvent / Requester triple. Cleaner because it
---       shares the cohort pointer already there; costly because it churns
---       an already-load-bearing interpreter.
---
--- Neither is landed here. Consumers of this port using @runWithReplace@
--- inside a @Query@ scope get a Query interpreter that doesn't reset per
--- cohort — behaviors from deleted sub-widgets remain in the aggregate.
--- Real usage inside 'Rhyolite.Frontend.App.RhyoliteWidget' will require
--- path (a) or (b) to land before we can retire the MTL 'QueryT'.
---------------------------------------------------------------------------------
+
+-- runQueryE collects one scope: it does not subtract queries from removed
+-- Adjustable children. Consumers needing that behavior must retain MTL
+-- QueryT's per-child collection semantics.
 
 -- | Semantic type alias — the query interpreter's behavior collector.
 -- Mirrors the MTL @StateT [Behavior t w] m@ inner layer of @QueryT@. In
@@ -5165,7 +3070,7 @@ subQueryE morphism d =
 --
 -- KNOWN INCOMPLETENESS: does not yet cover per-cohort behavior collection
 -- under 'runWithReplace' / 'traverseIntMapWithKeyWithAdjust' / etc.
--- See the TODO block above for the two viable landing paths.
+-- Retain MTL QueryT for widgets that need per-child query lifetimes.
 runQueryE
   :: forall x q es a.
      ( HasSpiderTimeline x
@@ -5411,209 +3316,10 @@ dynWithQueryE fDyn inner = do
 -- runner (side-effect: fires a shared trigger with each cohort's
 -- 'aggActions' event, which is then holdDyn'd + switchPromptlyDyn'd
 -- into a single stream that 'mainLoop' drains).
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT HeadlessSubEsE
-type HeadlessSubEsE (x :: Type) =
-  PerformEvent x
-  ': PostBuild (SpiderTimeline x)
-  ': TriggerEvent (SpiderTimeline x)
-  ': BaseEffectfulHostRow x
-
--- | Ambient row for 'runHeadlessAppE'. 'AdjustableE' + outer 'Requester'
--- + Base. Outer 'Requester' is required by the NEW upstream-faithful
--- 'runAdjustableE' — it uses 'requestingBundledE' to register per-cohort
--- bundled requests via a Multi tag at the outer scope (mirrors upstream
--- 'runWithReplaceRequesterTWith'). Widget-scoped 'PerformEvent' lives
--- in SUB and gets discharged per cohort with its own response slice.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT HeadlessSubEsE
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT HeadlessRowE
-type HeadlessRowE (x :: Type) =
-  AdjustableE (HeadlessSubEsE x) (SpiderTimeline x)
-  ': Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity
-  ': BaseEffectfulHostRow x
-
--- | NEW parallel to 'HeadlessSubEsE' — includes Requester in sub
--- (option (b) merged with PerformEvent via 'interpretPerformEventAsRequester').
--- Widget code that calls 'requesting' hits sub's Requester; 'performEvent'
--- goes through the same one. ONE Requester per cohort.
---
--- Order matters for right-to-left discharge composition:
--- '{runRequester . interpretPerformEventAsRequester . runPostBuild . runTriggerEvent}'.
--- Each interpreter peels HEAD. So order (head to tail):
--- TriggerEvent, PostBuild, PerformEvent, Requester, Base.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT HeadlessRowE
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT HeadlessSubEsEStandalone
-type HeadlessSubEsEStandalone (x :: Type) =
-  TriggerEvent (SpiderTimeline x)
-  ': PostBuild (SpiderTimeline x)
-  ': PerformEvent x
-  ': Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity
-  ': BaseEffectfulHostRow x
-
--- | NEW parallel to 'HeadlessRowE' — no outer Requester (option (b)).
--- 'runAdjustableEStandalone' installs its own internal Requester for
--- cohort bundling (invisible to caller).
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT HeadlessSubEsEStandalone
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT HeadlessRowEStandalone
-type HeadlessRowEStandalone (x :: Type) =
-  AdjustableE (HeadlessSubEsEStandalone x) (SpiderTimeline x)
-  ': BaseEffectfulHostRow x
-
--- | NEW parallel to 'runHeadlessAppE' — uses 'runAdjustableEStandalone'
--- (no outer Requester) + merged Requester+PerformEvent in sub.
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT HeadlessRowEStandalone
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runHeadlessAppEStandalone
-runHeadlessAppEStandalone
-  :: forall a
-   . (forall x. HasSpiderTimeline x
-      => Eff (HeadlessSubEsEStandalone x) (R.Event (SpiderTimeline x) a))
-  -> IO a
-runHeadlessAppEStandalone guest =
-  SI.withSpiderTimeline $ \(env :: SpiderTimelineEnv x) ->
-    runEffectfulHostFor @x
-      (do
-        (postBuild, pbTrigRef) <- liftIO $ do
-          rt <- newIORef Nothing
-          e <- newEventWithTriggerIO $ \t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing)
-          pure (SI.SpiderEvent e, rt)
-        (responseEv, respTrigRef) <- liftIO $ do
-          rt <- newIORef Nothing
-          e <- newEventWithTriggerIO $ \t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing)
-          pure (SI.SpiderEvent e, rt)
-        events <- liftIO newChan
-
-        -- Option (b) merged discharge chain — per-cohort Requester +
-        -- PerformEvent-as-requester.
-        let runSubWidget
-              :: forall y. R.Event (SpiderTimeline x) (RequesterData Identity)
-              -> Eff (HeadlessSubEsEStandalone x) y
-              -> Eff (BaseEffectfulHostRow x)
-                     (y, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x)))
-            runSubWidget cohortResp action =
-                runRequester @(SpiderTimeline x) @(SI.SpiderHostFrame x) @Identity cohortResp
-              . interpretPerformEventAsRequester @x
-              . runPostBuild postBuild
-              . runTriggerEvent events
-              $ action
-
-        (result, aggActions) <- EffectfulHost $
-          runAdjustableEStandalone @x @(HeadlessSubEsEStandalone x)
-            events responseEv runSubWidget
-          $ do
-              tup <- runWithReplace
-                @(HeadlessSubEsEStandalone x) @(SpiderTimeline x) guest R.never
-              pure tup
-
-        let (shutdownEv, _replEv) = result
-        shutdownHandle <- EffectfulHost (subscribeEventE @(SpiderTimeline x) shutdownEv)
-        actionsHandle  <- EffectfulHost (subscribeEventE @(SpiderTimeline x) aggActions)
-        mPbTrig <- liftIO (readIORef pbTrigRef)
-        let initialFires = case mPbTrig of
-              Nothing -> []
-              Just pbTrig -> [pbTrig :=> Identity ()]
-        initialShutdown <- liftIO $
-          fireAndDrain @x initialFires actionsHandle shutdownHandle respTrigRef
-        case initialShutdown of
-          Just outVal -> pure outVal
-          Nothing -> mainLoopE @x events actionsHandle shutdownHandle respTrigRef
-      )
-      env
-
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runHeadlessAppEStandalone
-{- BEGIN OLD-ADJUSTABLE-COMMENTED-OUT runHeadlessAppE
-runHeadlessAppE
-  :: forall a
-   . (forall x. HasSpiderTimeline x
-      => Eff (HeadlessSubEsE x) (R.Event (SpiderTimeline x) a))
-  -> IO a
-runHeadlessAppE guest =
-  SI.withSpiderTimeline $ \(env :: SpiderTimelineEnv x) ->
-    runEffectfulHostFor @x
-      (do
-        (postBuild, pbTrigRef) <- liftIO $ do
-          rt <- newIORef Nothing
-          e <- newEventWithTriggerIO $ \t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing)
-          pure (SI.SpiderEvent e, rt)
-        (responseEv, respTrigRef) <- liftIO $ do
-          rt <- newIORef Nothing
-          e <- newEventWithTriggerIO $ \t -> do
-            writeIORef rt (Just t)
-            pure (writeIORef rt Nothing)
-          pure (SI.SpiderEvent e, rt)
-        events <- liftIO newChan
-
-        -- UPSTREAM-FAITHFUL: response-aware runner. Takes per-cohort
-        -- response event (slice from outer Requester's fanned responses),
-        -- discharges sub effects with runPerformEvent using THAT slice.
-        -- Each cohort gets its OWN Requester scope with responses that
-        -- come only from THIS cohort's requesting slice — mirrors upstream
-        -- 'runRequesterT (nested a) (selectInt responses' n)'.
-        let runSubWidget
-              :: forall y. R.Event (SpiderTimeline x) (RequesterData Identity)
-              -> Eff (HeadlessSubEsE x) y
-              -> Eff (Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity
-                       ': BaseEffectfulHostRow x)
-                     (y, R.Event (SpiderTimeline x) (RequesterData (SI.SpiderHostFrame x)))
-            runSubWidget cohortResp action =
-              -- Discharge sub effects (PerformEvent + PostBuild + TriggerEvent)
-              -- down to Base, then 'E.raise' to bump into the outer row that
-              -- has Requester at head (needed for runAdjustableE's
-              -- 'requestingBundledE' call at the outer scope).
-              E.raise
-                $ runTriggerEvent events
-                . runPostBuild postBuild
-                . runPerformEventEff @'[IOE] @(SpiderTimeline x) cohortResp
-                $ action
-
-        -- Composer chain: runRequester discharges outer Requester (feeding
-        -- aggActions to mainLoop). runAdjustableE handles per-cohort
-        -- routing via Multi tag + rec + holdDyn + switchPromptlyDyn.
-        -- Structure mirrors runHeadlessApp's runPerformEventAndAdjustable
-        -- shape, but using AdjustableE's response-aware runner protocol
-        -- instead of the fused runner's IORef swap.
-        (result, aggActions) <- EffectfulHost $
-          runRequester @(SpiderTimeline x) @(SI.SpiderHostFrame x) @Identity responseEv
-          . runAdjustableE @x @(HeadlessSubEsE x) events runSubWidget
-          $ do
-              tup <- runWithReplace
-                @(HeadlessSubEsE x) @(SpiderTimeline x) guest R.never
-              pure tup
-
-        -- result is a (Event t shutdown, Event t replEv) tuple from runWithReplace
-        let (shutdownEv, _replEv) = result
-        shutdownHandle <- EffectfulHost (subscribeEventE @(SpiderTimeline x) shutdownEv)
-        actionsHandle  <- EffectfulHost (subscribeEventE @(SpiderTimeline x) aggActions)
-        mPbTrig <- liftIO (readIORef pbTrigRef)
-        let initialFires = case mPbTrig of
-              Nothing -> []
-              Just pbTrig -> [pbTrig :=> Identity ()]
-        initialShutdown <- liftIO $
-          fireAndDrain @x initialFires actionsHandle shutdownHandle respTrigRef
-        case initialShutdown of
-          Just outVal -> pure outVal
-          Nothing -> mainLoopE @x events actionsHandle shutdownHandle respTrigRef
-      )
-      env
--} -- END OLD-ADJUSTABLE-COMMENTED-OUT runHeadlessAppE
-
--- =====================================================================
--- BEGIN RESTORED-FROM-OLD-ADJUSTABLE (task #269 wave 2 — 2026-09-01)
--- =====================================================================
--- Restored from the OLD-ADJUSTABLE-COMMENTED-OUT blocks above via sed
--- (user directive 2026-09-01 — do not delete tests; un-comment the
--- library composers they depend on). Post-restoration, migrate all
--- 'PerformEventEff '[IOE] (SpiderTimeline x)' references to 'PerformEventEff \'[IOE] (SpiderTimeline x)'
--- and 'performEventEffE @'[IOE]' to 'performEventEffE @\'[IOE]' throughout
--- this block.
--- =====================================================================
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: AdjustableE ====
+
+-- | Higher-order adjustment with an explicit sub-widget effect row.
 data AdjustableE (sub :: [Effect]) (t :: Type) :: Effect where
   -- Constructor names use prime-suffix to avoid collision with the
   -- existing 'Adjustable' effect's 'RunWithReplace' etc. Send helpers
@@ -5641,7 +3347,6 @@ data AdjustableE (sub :: [Effect]) (t :: Type) :: Effect where
     -> AdjustableE sub t m (DMap.DMap k v', R.Event t (R.PatchDMapWithMove k v'))
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runWithReplace ====
 runWithReplace
   :: forall sub t es a b. AdjustableE sub t :> es
   => Eff sub a
@@ -5651,7 +3356,6 @@ runWithReplace a0 a' = send @(AdjustableE sub t) (RunWithReplace' a0 a')
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: traverseIntMapWithKeyWithAdjust ====
 traverseIntMapWithKeyWithAdjust
   :: forall sub t es v v'. AdjustableE sub t :> es
   => (IntMap.Key -> v -> Eff sub v')
@@ -5663,7 +3367,6 @@ traverseIntMapWithKeyWithAdjust f m0 pev =
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: traverseDMapWithKeyWithAdjust ====
 traverseDMapWithKeyWithAdjust
   :: forall sub t es k v v'. (AdjustableE sub t :> es, GCompare k)
   => (forall a. k a -> v a -> Eff sub (v' a))
@@ -5675,7 +3378,6 @@ traverseDMapWithKeyWithAdjust f m0 pev =
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: traverseDMapWithKeyWithAdjustWithMove ====
 traverseDMapWithKeyWithAdjustWithMove
   :: forall sub t es k v v'. (AdjustableE sub t :> es, GCompare k)
   => (forall a. k a -> v a -> Eff sub (v' a))
@@ -5688,7 +3390,6 @@ traverseDMapWithKeyWithAdjustWithMove f m0 pev =
 -- | Marker effect binding the timeline. No ops.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: AdjustableInRequesterT ====
 data AdjustableInRequesterT (t :: Type) (req :: Type -> Type) (rsp :: Type -> Type) :: Effect where
   RunWithReplaceRequesterT
     :: forall t req rsp es a b m.
@@ -5702,7 +3403,6 @@ data AdjustableInRequesterT (t :: Type) (req :: Type -> Type) (rsp :: Type -> Ty
     -> AdjustableInRequesterT t req rsp m (a, R.Event t b)
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runWithReplaceRequesterTE ====
 runWithReplaceRequesterTE
   :: forall t req rsp es a b.
      ( AdjustableInRequesterT t req rsp :> es
@@ -5761,30 +3461,9 @@ runWithReplaceRequesterTE a0 a' = send @(AdjustableInRequesterT t req rsp) (RunW
 -- 'performEvent'-with-response widgets in replacement cohorts. Response
 -- fanning (per upstream's 'fanInt' + 'selectInt' pattern) is a follow-up
 -- refinement.
--- | Idea attempted this session for a thin dispatch that would avoid the
--- storage-mismatch crash in the current implementation. Left as a comment
--- (not compiled) because 'send @(Adjustable t) (RunWithReplace a0 a')'
--- does NOT typecheck: the GADT constructor 'RunWithReplaceRequesterT'
--- has its own existentially-quantified effect row 'es1', and 'a0 :: Eff es1 a'
--- cannot be embedded in 'Adjustable t (Eff es)' where 'es' is the handler's
--- outer row (GHC-25897: "Could not deduce localEs ~ es"). Bridging that
--- gap requires 'localUnliftIO env SeqForkUnlift' but then the child ends
--- up in IO, which loses the reactive-widget rebuild semantics that
--- 'runWithReplaceE' relies on. This dead-end is preserved so we don't
--- re-attempt it without remembering why it doesn't fly.
---
--- {-
--- runAdjustableInRequesterT_THIN_DISPATCH_DOES_NOT_TYPECHECK
---   :: forall t req rsp es a.
---      (Adjustable t :> es)
---   => Eff (AdjustableInRequesterT t req rsp : es) a -> Eff es a
--- runAdjustableInRequesterT_THIN_DISPATCH_DOES_NOT_TYPECHECK = interpret $ \_env -> \case
---   RunWithReplaceRequesterT a0 a' -> send @(Adjustable t) (RunWithReplace a0 a')
--- -}
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runAdjustableInRequesterT ====
 runAdjustableInRequesterT
   :: forall t req rsp es a.
      ( R.Reflex t
@@ -5803,9 +3482,8 @@ runAdjustableInRequesterT = interpret $ \outerEnv -> \case
     -- bridge the child's opaque row 'es'' to the handler's row 'es'
     -- (both are Eff, but effectful dispatch keeps them distinct).
     -- KNOWN BUG: 'outerEnv' capture below causes storage-mismatch when
-    -- the replacement drain fires (see comment above about
-    -- runAdjustableInRequesterT_THIN_DISPATCH_DOES_NOT_TYPECHECK for
-    -- why the naive "just re-dispatch" fix doesn't work).
+    -- the replacement drain fires. Re-dispatch alone cannot bridge the
+    -- child's existential effect row into the outer handler row.
     let runInFreshScope
           :: Eff es' x -> Eff es (x, R.Event t (RequesterData req))
         runInFreshScope child = do
@@ -5916,7 +3594,6 @@ runAdjustableInRequesterT = interpret $ \outerEnv -> \case
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runRequesterLegacyIORef ====
 runRequesterLegacyIORef
   :: forall x req rsp es a. (HasSpiderTimeline x, R.Reflex (SpiderTimeline x), IOE :> es)
   => R.Event (SpiderTimeline x) (RequesterData rsp)
@@ -6001,7 +3678,6 @@ runRequesterLegacyIORef responses act = do
 -- 'RequesterData' event.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runAdjustableEChanBased ====
 runAdjustableEChanBased
   :: forall x sub es a.
      ( HasSpiderTimeline x
@@ -6179,7 +3855,6 @@ runAdjustableEChanBased chan runSubWidget = interpret $ \_env -> \case
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runAdjustableE ====
 runAdjustableE
   :: forall x sub es a.
      ( HasSpiderTimeline x
@@ -6557,7 +4232,6 @@ runAdjustableE chan runSubWidget = interpret $ \_env -> \case
 -- performEvent semantics).
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: scheduleReplacementCohorts ====
 scheduleReplacementCohorts
   :: forall x sub es bVal.
      ( HasSpiderTimeline x
@@ -6640,7 +4314,6 @@ scheduleReplacementCohorts chan runSubWidget responses' na' = do
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runAdjustableEStandalone ====
 runAdjustableEStandalone
   :: forall x sub es a.
      ( HasSpiderTimeline x
@@ -6698,7 +4371,6 @@ runAdjustableEStandalone chan responseEv runSubWidget action =
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runAdjustableEPerformEventBased ====
 runAdjustableEPerformEventBased
   :: forall x sub es a.
      ( HasSpiderTimeline x
@@ -6821,41 +4493,9 @@ runAdjustableEPerformEventBased runSubWidget = interpret $ \_env -> \case
     pure (m0', outEv)
 
 --------------------------------------------------------------------------------
--- 'runAdjustableEViaOld' — DISABLED, WRONG DESIGN.
---
--- I first attempted a bridge that translated 'AdjustableE' operations
--- into old 'Adjustable' operations and delegated to the existing fused
--- runner via the old-design send helpers. The user clarified this was
--- NOT the intended reuse: what they want is to REUSE THE INTERPOSE
--- MACHINERY (Requester + cohort + Multi2 tagging) inside
--- 'runPerformEventEffAndAdjustable' — i.e., extract the interpose body
--- and repoint it at the NEW 'AdjustableE' effect, so the cohort logic
--- lives once and is shared.
---
--- Kept commented (per "no deletions" rule) as a record of the wrong turn.
---
--- runAdjustableEViaOld
---   :: forall x sub es a.
---      ( HasSpiderTimeline x
---      , Adjustable (SpiderTimeline x) :> es
---      )
---   => (forall y. Eff sub y -> Eff es y)   -- sub-widget runner
---   -> Eff (AdjustableE sub (SpiderTimeline x) : es) a
---   -> Eff es a
--- runAdjustableEViaOld runSubWidget = interpret $ \_env -> \case
---   RunWithReplace' subA0 subA' ->
---     runWithReplaceE (runSubWidget subA0) (R.fmapCheap runSubWidget subA')
---   TraverseIntMapWithKeyWithAdjust' f m0 pev ->
---     traverseIntMapWithKeyWithAdjustE (\k v -> runSubWidget (f k v)) m0 pev
---   TraverseDMapWithKeyWithAdjust' f m0 pev ->
---     traverseDMapWithKeyWithAdjustE (\k v -> runSubWidget (f k v)) m0 pev
---   TraverseDMapWithKeyWithAdjustWithMove' f m0 pev ->
---     traverseDMapWithKeyWithAdjustWithMoveE (\k v -> runSubWidget (f k v)) m0 pev
---------------------------------------------------------------------------------
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runWithReplaceDirect ====
 runWithReplaceDirect
   :: forall x es a b.
      ( HasSpiderTimeline x
@@ -6883,7 +4523,6 @@ runWithReplaceDirect a0 a' =
 -- See 'runWithReplaceDirect' for drain-pattern rationale.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: traverseIntMapWithKeyWithAdjustDirect ====
 traverseIntMapWithKeyWithAdjustDirect
   :: forall x es v v'.
      ( HasSpiderTimeline x
@@ -6922,7 +4561,6 @@ traverseIntMapWithKeyWithAdjustDirect f m0 pev = do
 -- See 'runWithReplaceDirect' for drain-pattern rationale.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: traverseDMapWithKeyWithAdjustDirect ====
 traverseDMapWithKeyWithAdjustDirect
   :: forall x es k v v'.
      ( HasSpiderTimeline x
@@ -6963,7 +4601,6 @@ traverseDMapWithKeyWithAdjustDirect f m0 pev = do
 -- See 'runWithReplaceDirect' for drain-pattern rationale.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: traverseDMapWithKeyWithAdjustWithMoveDirect ====
 traverseDMapWithKeyWithAdjustWithMoveDirect
   :: forall x es k v v'.
      ( HasSpiderTimeline x
@@ -7008,75 +4645,15 @@ traverseDMapWithKeyWithAdjustWithMoveDirect f m0 pev = do
     triggerEv
   pure (m0', outEv)
 
--- NOTE: The following ATTEMPTED instance is commented out because GHC
--- rejects it as a duplicate of the instance above (same head
--- 'RA.Adjustable t (Eff es)'). OVERLAPPING/OVERLAPPABLE pragmas don't
--- resolve this — GHC's duplicate-instance check operates on the HEAD
--- shape, not the constraint context. Preserving here per no-deletions
--- rule as design record.
---
--- To route MTL Adjustable class calls to the NEW 'AdjustableE' effect,
--- the CLEANEST path is one of:
---
---   (a) Change the EXISTING instance body above to dispatch to new
---       'AdjustableE' via 'runWithReplace @es @t' (self-recursive constraint
---       'AdjustableE es t :> es' — requires row to include AdjustableE at
---       itself, which needs a TypeFamily or newtype workaround to satisfy
---       syntactically). Breaks existing consumers using OLD Adjustable rows.
---
---   (b) Add a NEWTYPE wrapper 'WidgetEffE es a = WidgetEffE (Eff es a)'
---       with Adjustable instance sending to new AdjustableE. Consumers
---       opt in by wrapping in 'WidgetEffE'. Doesn't collide with existing
---       instance.
---
---   (c) Migrate consumers/tests directly to 'send @(AdjustableE ...)' or
---       to the top-level 'runWithReplace' send helper (non-class).
---       Doesn't need MTL class routing at all.
---
--- instance ( AdjustableE es t :> es
---          , RA.Adjustable t (Eff es), R.Reflex t)
---       => RA.Adjustable t (Eff es) where
---   runWithReplace                        = runWithReplace @es @t
---   traverseIntMapWithKeyWithAdjust       = traverseIntMapWithKeyWithAdjust @es @t
---   traverseDMapWithKeyWithAdjust         = traverseDMapWithKeyWithAdjust @es @t
---   traverseDMapWithKeyWithAdjustWithMove = traverseDMapWithKeyWithAdjustWithMove @es @t
-
---------------------------------------------------------------------------------
--- Option (B): Newtype wrapper 'WidgetEffE' + MTL Adjustable instance routing
--- to the NEW 'AdjustableE' effect.
---
--- Consumers who want to run MTL 'Adjustable'-polymorphic code (widgetHold,
--- dyn, etc.) through the NEW machinery wrap their Eff computation in
--- 'WidgetEffE'. The instance below routes MTL class methods through the
--- new 'AdjustableE' send helpers ('runWithReplace @es @t' etc.), so any
--- MTL widget code polymorphic over 'Adjustable t m' will use the NEW
--- interpreter when instantiated at @m = WidgetEffE es@.
---
--- The recursive constraint 'AdjustableE es t :> es' means the row 'es'
--- must include 'AdjustableE es t' (self-referential — sub row = outer row,
--- enabling nested 'runWithReplace' with the same row at each level).
--- Consumers need to define such a row via a recursive type family or
--- similar workaround to satisfy the constraint syntactically. This is a
--- follow-on task; the instance itself is complete.
---
--- Coexists with the plain 'Eff es' instance above (which routes to OLD
--- 'Adjustable' effect). No overlap because the newtype changes the
--- instance HEAD ('WidgetEffE es' vs 'Eff es').
---------------------------------------------------------------------------------
-
--- | Newtype wrapper enabling MTL Adjustable class routing through the
--- NEW 'AdjustableE' effect. See docstring above for context.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: WidgetEffE ====
+-- | MTL Adjustable wrapper using the direct Spider replacement helpers.
+-- Its distinct monad type keeps this instance separate from the Eff instance.
 newtype WidgetEffE es a = WidgetEffE { unWidgetEffE :: Eff es a }
   deriving newtype (Functor, Applicative, Monad, MonadFix)
 
--- Standalone deriving for 'MonadIO' — needs 'IOE :> es' constraint that
--- can't be expressed in the plain 'deriving' clause above.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT:  ====
 instance ( HasSpiderTimeline x
          , IOE :> es
          , PerformEventEff '[IOE] (SpiderTimeline x) :> es
@@ -7097,7 +4674,6 @@ instance ( HasSpiderTimeline x
       (\k v -> unWidgetEffE (f k v)) m0 pev
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: HeadlessSubEsE ====
 type HeadlessSubEsE (x :: Type) =
   PerformEventEff '[IOE] (SpiderTimeline x)
   ': PostBuild (SpiderTimeline x)
@@ -7105,20 +4681,19 @@ type HeadlessSubEsE (x :: Type) =
   ': BaseEffectfulHostRow x
 
 -- | Ambient row for 'runHeadlessAppE'. 'AdjustableE' + outer 'Requester'
--- + Base. Outer 'Requester' is required by the NEW upstream-faithful
+-- + Base. Outer 'Requester' is required by the cohort-aware
 -- 'runAdjustableE' — it uses 'requestingBundledE' to register per-cohort
 -- bundled requests via a Multi tag at the outer scope (mirrors upstream
 -- 'runWithReplaceRequesterTWith'). Widget-scoped 'PerformEvent' lives
 -- in SUB and gets discharged per cohort with its own response slice.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: HeadlessRowE ====
 type HeadlessRowE (x :: Type) =
   AdjustableE (HeadlessSubEsE x) (SpiderTimeline x)
   ': Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity
   ': BaseEffectfulHostRow x
 
--- | NEW parallel to 'HeadlessSubEsE' — includes Requester in sub
+-- | Parallel to 'HeadlessSubEsE' — includes Requester in sub
 -- (option (b) merged with PerformEvent via 'interpretPerformEventEffAsRequester').
 -- Widget code that calls 'requesting' hits sub's Requester; 'performEvent'
 -- goes through the same one. ONE Requester per cohort.
@@ -7129,7 +4704,6 @@ type HeadlessRowE (x :: Type) =
 -- TriggerEvent, PostBuild, PerformEvent, Requester, Base.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: HeadlessSubEsEStandalone ====
 type HeadlessSubEsEStandalone (x :: Type) =
   TriggerEvent (SpiderTimeline x)
   ': PostBuild (SpiderTimeline x)
@@ -7137,21 +4711,19 @@ type HeadlessSubEsEStandalone (x :: Type) =
   ': Requester (SpiderTimeline x) (SI.SpiderHostFrame x) Identity
   ': BaseEffectfulHostRow x
 
--- | NEW parallel to 'HeadlessRowE' — no outer Requester (option (b)).
+-- | Parallel to 'HeadlessRowE' — no outer Requester (option (b)).
 -- 'runAdjustableEStandalone' installs its own internal Requester for
 -- cohort bundling (invisible to caller).
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: HeadlessRowEStandalone ====
 type HeadlessRowEStandalone (x :: Type) =
   AdjustableE (HeadlessSubEsEStandalone x) (SpiderTimeline x)
   ': BaseEffectfulHostRow x
 
--- | NEW parallel to 'runHeadlessAppE' — uses 'runAdjustableEStandalone'
+-- | Parallel to 'runHeadlessAppE' — uses 'runAdjustableEStandalone'
 -- (no outer Requester) + merged Requester+PerformEvent in sub.
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runHeadlessAppEStandalone ====
 runHeadlessAppEStandalone
   :: forall a
    . (forall x. HasSpiderTimeline x
@@ -7214,7 +4786,6 @@ runHeadlessAppEStandalone guest =
 
 
 
--- ==== RESTORED FROM OLD-ADJUSTABLE-COMMENTED-OUT: runHeadlessAppE ====
 runHeadlessAppE
   :: forall a
    . (forall x. HasSpiderTimeline x
@@ -7292,6 +4863,5 @@ runHeadlessAppE guest =
       env
 
 
--- Missing DispatchOf declarations (were '-- OLD-ADJUSTABLE-COMMENTED-OUT:' single-line comments)
 type instance E.DispatchOf (AdjustableE sub t) = E.Dynamic
 type instance E.DispatchOf (AdjustableInRequesterT t req rsp) = E.Dynamic
