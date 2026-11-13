@@ -27,7 +27,6 @@ module Reflex.Query.Class
   , mapQueryResult
   ) where
 
-import Control.Applicative
 import Control.Category (Category)
 import qualified Control.Category as Cat
 import Control.Monad.Reader
@@ -37,7 +36,8 @@ import Data.Ix
 import Data.Kind (Type)
 import Data.Map.Monoidal (MonoidalMap)
 import qualified Data.Map.Monoidal as MonoidalMap
-import Data.Semigroup (Semigroup(..))
+import Data.Monoid.DecidablyEmpty (DecidablyEmpty)
+import Data.MonoidMap (MonoidMap (..), monoidMap)
 import Data.Semigroup.Commutative
 import Data.Void
 import Data.Monoid hiding ((<>))
@@ -56,6 +56,12 @@ class (Monoid (QueryResult a), Semigroup (QueryResult a)) => Query a where
 instance (Ord k, Query v) => Query (MonoidalMap k v) where
   type QueryResult (MonoidalMap k v) = MonoidalMap k (QueryResult v)
   crop q r = MonoidalMap.intersectionWith (flip crop) r q
+
+-- | Retain requested keys and remove results that become empty after cropping.
+instance (DecidablyEmpty (QueryResult q), Ord k, Query q) => Query (MonoidMap k q) where
+  type QueryResult (MonoidMap k q) = MonoidMap k (QueryResult q)
+  crop (MonoidMap q) (MonoidMap r) =
+    monoidMap $ MonoidalMap.intersectionWith crop q r
 
 -- | the result of two queries is both results.
 instance (Query a, Query b) => Query (a, b) where

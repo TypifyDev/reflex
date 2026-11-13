@@ -198,6 +198,7 @@ import Control.Exception (evaluate)
 import Control.Monad (forM, forM_, when)
 import Control.Monad.Fix (MonadFix)
 import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Primitive (touch)
 import Data.Coerce (coerce)
 import Data.Dependent.Sum (DSum (..))
 import qualified Data.Dependent.Map as DMap
@@ -218,7 +219,7 @@ import System.Mem.Weak (finalize)
 
 import Effectful (Eff, Effect, IOE, (:>), runEff, withEffToIO, raise, inject, Subset)
 import qualified Effectful as E
-import Effectful.Dispatch.Dynamic (interpret, reinterpret, send, localSeqUnliftIO, localUnliftIO, EffectHandler, interpose)
+import Effectful.Dispatch.Dynamic (interpret, reinterpret, send, localSeqUnliftIO, localUnliftIO, EffectHandler, interpose, localSeqUnlift, localLend, LocalEnv, SharedSuffix)
 import qualified Effectful as E (UnliftStrategy (..), Persistence (..), Limit (..))
 import Effectful.Internal.Unlift (UnliftStrategy (..))
 import qualified Effectful.Reader.Static as EFRD
@@ -1424,10 +1425,10 @@ runPerformEventAndAdjustableM responses act = do
       pure (r, mergedEv)
 
     -- Direct Requester handler: routes 'Requesting_' / 'Requesting' /
-    -- 'RequestingBundled' to whichever stateRef 'cohortPtr' currently
+    -- both bundled operations to whichever stateRef 'cohortPtr' currently
     -- points at. Mirrors the outer 'runRequester' interpret handler
     -- (L744-783) but writes through the cohort indirection so cohort
-    -- callers see their own tag namespace. All three constructors of
+    -- callers see their own tag namespace. All four constructors of
     -- the 'Requester' GADT are handled here so direct 'send @Requester'
     -- calls stay coherent with 'PerformEvent'-lifted writes.
     requesterHandler
@@ -1457,6 +1458,14 @@ runPerformEventAndAdjustableM responses act = do
           let ev :: R.Event (SpiderTimeline x) Any
               ev = unsafeCoerce bundleEv
           n' <- allocTag @Multi cohortPtr ev
+          (_, s) <- readIORef cohortPtr
+          pure (n', s)
+        pure (unsafeCoerce (R.selectInt sel n))
+      RequestingBundled3 bundleEv -> do
+        (n, sel) <- liftIO $ do
+          let ev :: R.Event (SpiderTimeline x) Any
+              ev = unsafeCoerce bundleEv
+          n' <- allocTag @Multi3 cohortPtr ev
           (_, s) <- readIORef cohortPtr
           pure (n', s)
         pure (unsafeCoerce (R.selectInt sel n))
@@ -1560,8 +1569,11 @@ runPerformEventAndAdjustableM responses act = do
             liftIO $ do
               System.IO.hPutStrLn System.IO.stderr "[fixq] RunWithReplace handler ENTRY (outer build)"
               System.IO.hFlush System.IO.stderr
+            -- Construction and browser event draining use different threads.
+            -- Retain a per-thread environment; cohort state lives in shared
+            -- IORefs and Spider serializes the actual event frames.
             (initial, triggerEv, resultRef) <-
-              localUnliftIO env SeqForkUnlift $ \unlift -> do
+              withRetainedLocalUnlift env $ \unlift -> do
                 System.IO.hPutStrLn System.IO.stderr "[fixq] RunWithReplace localUnliftIO block ENTER"
                 System.IO.hFlush System.IO.stderr
                 -- Cohort 0 (a0's initial widget): install cohort0Sel while
@@ -1682,7 +1694,7 @@ runPerformEventAndAdjustableM responses act = do
                       perElementIntMap = unsafeCoerce perElementEv
                   in R.fanInt perElementIntMap
             (initial, triggerEv, resultRef) <-
-              localUnliftIO env SeqForkUnlift $ \unlift -> do
+              withRetainedLocalUnlift env $ \unlift -> do
                 -- Initial elements: cohort n=0 (mirrors upstream L443
                 -- 'fmap ((,) 0) dm0'). Element (k, 0) uses mkElementSel k 0.
                 pairsMap <- IntMap.traverseWithKey (\k v -> do
@@ -1789,7 +1801,7 @@ runPerformEventAndAdjustableM responses act = do
                       perElementEv = R.mapMaybeCheap (IntMap.lookup n) perKeyEv
                   in R.fanInt perElementEv
             (m0', eventMap0, triggerEv, resultRef) <-
-              localUnliftIO env SeqForkUnlift $ \unlift -> do
+              withRetainedLocalUnlift env $ \unlift -> do
                 initialAgg <- newIORef Map.empty
                 -- Initial elements: cohort n=0.
                 m0' <- DMap.traverseWithKey (\k v -> do
@@ -1892,7 +1904,7 @@ runPerformEventAndAdjustableM responses act = do
                       perElementEv = R.mapMaybeCheap (IntMap.lookup n) perKeyEv
                   in R.fanInt perElementEv
             (m0', eventMap0, triggerEv, resultRef) <-
-              localUnliftIO env SeqForkUnlift $ \unlift -> do
+              withRetainedLocalUnlift env $ \unlift -> do
                 initialAgg <- newIORef Map.empty
                 m0' <- DMap.traverseWithKey (\k v -> do
                     (r, mergedEv) <- runInCohortIO cohortPtr
@@ -2441,11 +2453,27 @@ runTriggerEvent chan = interpret $ \_ -> \case
 -- Interpreters for the base row
 --------------------------------------------------------------------------------
 
+-- | Deferred callbacks may run after construction, on either the original
+-- thread or the browser drain thread. Clone before installing the concurrent
+-- unlift: its original-thread fast path must also retain valid storage.
+withRetainedLocalUnlift
+  :: (IOE :> es, SharedSuffix es handlerEs)
+  => LocalEnv localEs handlerEs
+  -> ((forall r. Eff localEs r -> IO r) -> IO a)
+  -> Eff es a
+withRetainedLocalUnlift env action =
+  localSeqUnlift env $ \unlift ->
+    localLend @'[IOE] env SeqForkUnlift $ \lend ->
+      unlift $ lend $ withEffToIO (E.ConcUnlift E.Persistent E.Unlimited) $ \run ->
+        action (run . raise)
+
+-- | Sample within the current construction frame, like SpiderHostFrame.
+-- Flushing here would subscribe to recursive inputs before mfix finishes.
 runSample
   :: forall x es a. (HasSpiderTimeline x, IOE :> es)
   => Eff (Sample (SpiderTimeline x) : es) a -> Eff es a
 runSample = interpret $ \_ -> \case
-  Sample b -> liftIO $ frame @x (readBehaviorUntracked (SI.unSpiderBehavior b))
+  Sample b -> liftIO $ runEventM @x (readBehaviorUntracked (SI.unSpiderBehavior b))
 
 -- | 'Hold' interpreter. Uses 'runEventM' rather than 'frame @x' — 'frame'
 -- calls 'runHoldInits' at the end of each invocation, which SUBSCRIBES to
@@ -2534,7 +2562,7 @@ runReadEvent
   => Eff (ReadEvent (SpiderTimeline x) : es) a -> Eff es a
 runReadEvent = interpret $ \_ -> \case
   ReadEventOp h -> do
-    result <- liftIO (readIORef (spiderEventHandleValue h))
+    result <- liftIO (readSpiderEventHandle h)
     pure (fmap pure result)
 
 runCreateTrigger
@@ -4880,7 +4908,13 @@ runHeadlessAppM guest =
 
 -- | Read a Spider event handle's current value from IO.
 readSpiderEventHandle :: SpiderEventHandle x b -> IO (Maybe b)
-readSpiderEventHandle h = readIORef (spiderEventHandleValue h)
+{-# NOINLINE readSpiderEventHandle #-}
+readSpiderEventHandle h = do
+  result <- readIORef (spiderEventHandleValue h)
+  -- Retain the subscription as well as its value, matching Spider.readEvent.
+  -- Otherwise optimized readers can let GC disconnect a live network.
+  touch h
+  pure result
 
 -- | Fire a batch of triggers, then drain any 'performEvent'-scheduled
 -- actions to a fixpoint. Returns the shutdown value if the shutdown

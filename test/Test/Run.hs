@@ -22,7 +22,6 @@ import Effectful (Eff, IOE)
 import Reflex
 import Reflex.Host.Class
 import qualified Reflex.Host.HeadlessEffectful as Native
-import Reflex.Requester.Base (RequesterData, traverseRequesterData)
 import qualified Reflex.Spider.Internal as SI
 import Reflex.Spider.Internal (HasSpiderTimeline)
 
@@ -252,7 +251,17 @@ runAppEffectfulM
   -> bIn
   -> [Maybe (These bIn eIn)]
   -> IO [[(bOut, Maybe eOut)]]
-runAppEffectfulM app b0 input =
+runAppEffectfulM = runAppEffectfulMWith id
+
+-- | Allow browser-style event draining on a different thread from construction.
+runAppEffectfulMWith
+  :: (forall a. IO a -> IO a)
+  -> (forall x. HasSpiderTimeline x
+      => AppIn (SpiderTimeline x) bIn eIn
+      -> Eff (Native.HeadlessRowM (SpiderTimeline x))
+             (AppOut (SpiderTimeline x) bOut eOut))
+  -> bIn -> [Maybe (These bIn eIn)] -> IO [[(bOut, Maybe eOut)]]
+runAppEffectfulMWith dispatch app b0 input =
   SI.withSpiderTimeline $ \(env :: SI.SpiderTimelineEnv x) ->
     Native.runEffectfulHostFor @x
       (do
@@ -297,7 +306,7 @@ runAppEffectfulM app b0 input =
               mE <- liftIO (readIORef (SI.spiderEventHandleValue outHandle))
               pure (b, mE)
         let fireBatch ts = fireAndReadE @x ts readPhase actionsHandle respTrigRef
-        liftIO $ forM input $ \case
+        liftIO $ dispatch $ forM input $ \case
           Nothing -> fireBatch []
           Just (This b') -> case mpulseB of
             Nothing -> error "runAppEffectfulM: tried to fire in-behavior but ref was empty"
